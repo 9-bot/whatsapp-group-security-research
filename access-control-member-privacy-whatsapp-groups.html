@@ -1,0 +1,226 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access Control and Member Privacy in Large WhatsApp Groups: Invite-Link Exposure, Phone-Number Disclosure and Unwanted Entry</title><meta name="author" content="Ivan Schroll, 9bot"><style>body{font-family:Inter,Arial,sans-serif;max-width:820px;margin:auto;padding:24px;line-height:1.6;color:#111}a{color:#0a7d3e}section{margin-bottom:32px}</style></head><body><p><a href="./">WhatsApp Group Security Research (Ivan Schroll)</a></p>
+<section data-document-role="page" data-label="Title"><h1>Access Control and Member Privacy in Large WhatsApp Groups: Invite-Link Exposure, Phone-Number Disclosure and Unwanted Entry</h1>
+<blockquote>
+<p>Originally published on OSF: osf.io/wfdq3 · DOI: 10.17605/OSF.IO/WFDQ3</p>
+</blockquote>
+<p><strong>Ivan Schroll</strong><br>
+Independent Researcher, Brazil · ORCID: 0009-0007-0680-5570</p>
+<p><em>Narrative review / technical report · October 2026 · Language: English · License: CC BY 4.0</em></p></section>
+<section data-document-role="page" data-label="Abstract"><h2>Abstract</h2>
+<p>WhatsApp groups are identified by invite links and populated by accounts identified by phone numbers. These two design facts shape the security and privacy of every large group: whoever holds a link can join, and whoever joins can see the phone numbers of other members. This narrative review synthesises peer-reviewed measurement studies (on public group links, contact discovery and phone-number enumeration), WhatsApp Help Center documentation, WhatsApp community guidance, a 2026 Meta announcement on usernames and the Brazilian General Data Protection Law (LGPD). All sources were accessed and verified in October 2026. The review finds that invite links posted in public places are discoverable at scale and that joining a public group exposes members' phone numbers to anyone who joins; that large-scale phone-number enumeration on WhatsApp was demonstrated as recently as 2025, before remediation; and that platform defaults, such as allowing anyone to add a user to groups, favour reach over privacy. It then examines the access controls available to administrators (approval of new members, restricting who can share links, resetting links, keeping links off public web pages) and how automated group tooling can apply entry filters, daily limits, time-limited access and removal of inactive members. The review argues that access control is the main privacy lever available at group level, but that group administrators cannot change platform-level exposure. No original data are reported.</p></section>
+<section data-document-role="page" data-label="Keywords"><h2>Keywords</h2>
+<p>WhatsApp; group privacy; invite links; phone numbers; access control; enumeration; usernames; LGPD; data protection; group administration</p></section>
+<section data-document-role="page" data-label="1. Introduction"><h2>1. Introduction</h2>
+<p>Most discussions of WhatsApp security focus on message content, which is protected by end-to-end encryption. Group membership is a different matter. To join a group a user needs either to be added by an admin or to use an invite link, and once inside, the user is visible to other members, usually through a phone number. A group of one thousand members is therefore also a list of up to one thousand phone numbers available to every member (WhatsApp Help Center, n.d.-a).</p>
+<p>This matters for three reasons. First, phone numbers are long-lived identifiers that connect a person to banking, messaging and other accounts. Second, research has shown that group invite links posted publicly can be collected at scale and that joining such groups exposes members' numbers (Hoseini et al., 2020). Third, scammers and spammers use group membership lists as a source of targets, a pattern that WhatsApp acknowledges when it warns that scammers may "add you to a group" (WhatsApp Help Center, n.d.-b).</p>
+<p>This review asks:</p>
+<ol>
+<li>How are group links and member phone numbers exposed, according to peer-reviewed research and platform documentation?</li>
+<li>What controls do the platform and administrators have over who enters a group?</li>
+<li>How does automated group tooling extend those controls, and what are its limits?</li>
+<li>How does Brazilian data protection law frame the role of those who run groups?</li>
+</ol>
+<p>The paper complements earlier reports by the same author on moderation governance, on the legal responsibility of administrators, on account takeover and on scams. It focuses on entry and membership rather than on content.</p></section>
+<section data-document-role="page" data-label="2. Background"><h2>2. Background</h2>
+<h3>2.1 Groups and invite links</h3>
+<p>WhatsApp groups can hold up to 1,024 members (WhatsApp Help Center, n.d.-a). Admins can invite people through a link, and the Help Center warns that "anyone with a group link can join your group and forward the link" (WhatsApp Help Center, n.d.-a). Admins can reset the link, after which the previous link no longer works (WhatsApp Help Center, n.d.-c). Group settings allow admins to require approval of new members and to control who can add members and share links (WhatsApp Help Center, n.d.-d).</p>
+<h3>2.2 Phone numbers as identifiers</h3>
+<p>WhatsApp accounts are registered to phone numbers. Meta's June 2026 announcement on usernames states that usernames will allow people to connect without sharing their phone number, with an optional username key for added protection, and that the feature is rolling out gradually (Meta, 2026). Until such features are widely adopted and applied in groups, phone numbers remain the common identifier visible to group members.</p>
+<h3>2.3 Privacy defaults</h3>
+<p>WhatsApp's Help Center describes the default privacy settings: by default, users can be added to groups by anyone, and profile photos are visible to everyone unless the user changes the setting (WhatsApp Help Center, n.d.-e). Each user can change who may add them to groups.</p></section>
+<section data-document-role="page" data-label="3. Method"><h2>3. Method</h2>
+<h3>3.1 Design</h3>
+<p>This is a narrative review presented as a technical report. It reports no original data and makes no measurement of group links, phone numbers or user behaviour.</p>
+<h3>3.2 Sources and search</h3>
+<p>Searches were conducted between 20 and 26 October 2026 in English and Portuguese using terms such as "WhatsApp group invite link privacy", "WhatsApp phone number enumeration", "contact discovery abuse", "public WhatsApp groups measurement", "WhatsApp usernames", "aprovar novos participantes WhatsApp" and "LGPD tratamento dados pessoais". Included source types were:</p>
+<ul>
+<li>peer-reviewed measurement studies, located through conference proceedings and DOI resolvers;</li>
+<li>WhatsApp Help Center articles and WhatsApp community guidance;</li>
+<li>Meta newsroom posts;</li>
+<li>the consolidated text of the LGPD on the Brazilian federal government's legislation portal;</li>
+<li>9bot's public product pages, used only to describe documented features.</li>
+</ul>
+<p>Each reference was opened in October 2026 at the address listed. Bibliographic metadata of peer-reviewed papers was checked against Crossref records. Where a publisher page blocked automated access, the paper was verified through an open-access copy and the DOI record.</p>
+<h3>3.3 Analysis</h3>
+<p>Sources were grouped into exposure mechanisms (how links and numbers become available to unintended parties) and controls (who can reduce that exposure). Controls were then classified by actor: platform, individual user, group administrator and administration tool.</p></section>
+<section data-document-role="page" data-label="4. Findings"><h2>4. Findings</h2>
+<h3>4.1 Exposure of invite links</h3>
+<p>Garimella and Tyson (2018) showed that public WhatsApp groups can be found through invite links shared on the open web and joined for research purposes, establishing a method later used by other studies. Hoseini et al. (2020) extended this to several platforms, collecting 351,000 unique group URLs for WhatsApp, Telegram and Discord shared on Twitter over 38 days. They report that the phone numbers of all WhatsApp users they discovered in the groups they joined, 54,984 users, were exposed to them as members, and that 27% of WhatsApp group URLs became inaccessible within the 38 days, which indicates that admins revoke or reset links over time.</p>
+<p>WhatsApp's community guidance gives a direct recommendation consistent with these findings: never post a community or group invite link on public web pages (WhatsApp, n.d.). The guidance also warns admins not to @mention members in a community's announcement group, because that exposes the member's phone number to everyone in the community, and notes that communities cannot be found by searching (WhatsApp, n.d.).</p>
+<p>How invite links behave and how to reset one is explained in <a href="https://9bot.com.br/en/whatsapp-group-invite-link/">the WhatsApp group invite link guide</a>.</p>
+<h3>4.2 Exposure of phone numbers through contact discovery</h3>
+<p>Phone numbers can also be collected outside groups. Hagen et al. (2021) showed that the contact discovery mechanism of mobile messengers can be abused at scale; they queried 10% of US mobile phone numbers on WhatsApp and reported that very few users change the default privacy settings that determine what others can see. Gegenhuber et al. (2026) revisited the problem and reported that they were able to probe "over a hundred million phone numbers per hour without encountering blocking or effective rate limiting", that nearly half of the phone numbers disclosed in the 2021 Facebook data leak were still active on WhatsApp, and that WhatsApp had 3.5 billion active accounts as of early 2025. The updated version of the paper reports that WhatsApp introduced countermeasures, including cardinality limits on queries and limits on retrieving public profile pictures and about texts, which the authors helped confirm were effective by early October 2025 (Gegenhuber et al., 2026).</p>
+<p>For group administrators, these studies have two implications. First, a member's phone number is not a secret that the group can protect once it is known: the same number may already be in leaked datasets. Second, the information that a group adds to a phone number, namely that its owner belongs to a given community, can itself be sensitive. A group for patients, a religious community or a political movement reveals something about each member to every other member.</p>
+<p>Options for members are summarised in <a href="https://9bot.com.br/en/hide-phone-number-whatsapp-group/">how to hide your phone number in a WhatsApp group</a>.</p>
+<h3>4.3 Unwanted entry</h3>
+<p>Unwanted entry can take several forms in the sources reviewed:</p>
+<ul>
+<li><strong>Joining through a leaked or forwarded link.</strong> Any link holder can join and forward the link further (WhatsApp Help Center, n.d.-a).</li>
+<li><strong>Being added without consent.</strong> By default, anyone can add a user to a group (WhatsApp Help Center, n.d.-e). Meta introduced a safety overview when a non-contact adds a user to an unfamiliar group, with notifications silenced until the user chooses to stay (Meta, 2025).</li>
+<li><strong>Entry for scraping or targeting.</strong> The measurement studies above show that joining groups yields member phone numbers (Hoseini et al., 2020), and WhatsApp states that scammers may add people to groups (WhatsApp Help Center, n.d.-b).</li>
+<li><strong>Mass entry or bulk behaviour.</strong> WhatsApp's Terms of Service prohibit unauthorised bulk and automated messaging (WhatsApp, 2026), and its community guidance states that communities must not involve bulk messaging, auto-messaging or auto-dialing (WhatsApp, n.d.).</li>
+</ul>
+<p>How entry approval can be automated is described in <a href="https://9bot.com.br/en/auto-approve-whatsapp-group-members/">auto approve WhatsApp group members</a>.</p>
+<h3>4.4 Platform and administrator controls</h3>
+<p>The controls documented by WhatsApp that bear on entry and membership are:</p>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Who applies it</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Approve new members</td>
+<td>Admin</td>
+<td>Join requests through a link wait for admin approval (WhatsApp Help Center, n.d.-d)</td>
+</tr>
+<tr>
+<td>Restrict who can add members and share the link</td>
+<td>Admin</td>
+<td>Admins choose who can add members and share the link; the Help Center notes a different default for groups with fewer than 33 members (WhatsApp Help Center, n.d.-d)</td>
+</tr>
+<tr>
+<td>Reset invite link</td>
+<td>Admin</td>
+<td>The previous link stops working and cannot be restored (WhatsApp Help Center, n.d.-a; n.d.-c)</td>
+</tr>
+<tr>
+<td>Keep links off public web pages</td>
+<td>Admin</td>
+<td>Reduces discoverability (WhatsApp, n.d.)</td>
+</tr>
+<tr>
+<td>Avoid @mentions in announcement groups</td>
+<td>Admin</td>
+<td>Avoids exposing numbers to the whole community (WhatsApp, n.d.)</td>
+</tr>
+<tr>
+<td>Who can add me to groups</td>
+<td>User</td>
+<td>Limits unsolicited additions (WhatsApp Help Center, n.d.-e)</td>
+</tr>
+<tr>
+<td>Safety overview for unfamiliar groups</td>
+<td>Platform</td>
+<td>Context and exit option before viewing the chat (Meta, 2025)</td>
+</tr>
+<tr>
+<td>Usernames and username key</td>
+<td>Platform and user</td>
+<td>Contact without sharing a phone number, rolling out gradually (Meta, 2026)</td>
+</tr>
+<tr>
+<td>Rate limits on contact discovery</td>
+<td>Platform</td>
+<td>Reduce enumeration at scale (Gegenhuber et al., 2026)</td>
+</tr>
+<tr>
+<td>Group suspension for violations</td>
+<td>Platform</td>
+<td>Enforcement against groups that break the rules (WhatsApp Help Center, n.d.-f)</td>
+</tr>
+</tbody>
+</table>
+<p>A practical walkthrough is in <a href="https://9bot.com.br/en/security-settings-large-whatsapp-groups/">security settings for large WhatsApp groups</a>.</p>
+<h3>4.5 Tooling-level controls</h3>
+<p>Large groups and networks of groups generate many join requests, which makes manual approval demanding. This section describes how features documented by one administration tool, 9bot, relate to entry and membership (9bot, n.d.-a; 9bot, n.d.-b). The author is the founder of 9bot (see the competing-interests statement). 9bot is independent of WhatsApp and Meta and is not endorsed by them. The features are described from public documentation; their effect on privacy outcomes has not been measured.</p>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Documented feature</th>
+<th>Limits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Screen join requests consistently</td>
+<td>Member approval with filters, daily limits and an approval history</td>
+<td>Filters use the information available at entry and cannot verify intent</td>
+</tr>
+<tr>
+<td>Prevent sudden mass entry</td>
+<td>Daily approval limits and anti-flood rules</td>
+<td>Slows entry; does not prevent a single targeted account</td>
+</tr>
+<tr>
+<td>Remove people who no longer participate</td>
+<td>Removal of inactive members, with a notice before removal</td>
+<td>Reduces the number of passive observers; members may object, so rules should be announced</td>
+</tr>
+<tr>
+<td>Give access for a fixed period</td>
+<td>Time-limited access</td>
+<td>Suits courses, events and paid communities; requires clear terms</td>
+</tr>
+<tr>
+<td>Reduce reliance on public links</td>
+<td>Workflows on join and leave events and welcome messages that state the group's rules</td>
+<td>Informs new members; does not by itself prevent link leaks</td>
+</tr>
+<tr>
+<td>Keep a record of decisions</td>
+<td>Moderation and approval history; per-user dashboard access for the admin team</td>
+<td>Supports accountability; records themselves contain personal data</td>
+</tr>
+</tbody>
+</table>
+<p>Two further points are relevant. First, a tool that acts in a group processes members' personal data, at minimum phone numbers and participation events, so its use should be stated to members. Second, according to 9bot's documentation, the customer connects their own WhatsApp number to the service by pairing code or QR code and adds that number to their groups; the tool therefore acts with the permissions of that number in the group, not with any special platform access (9bot, n.d.-a). Any administrator using automation should consider WhatsApp's rules on automated and bulk messaging (WhatsApp, 2026).</p>
+<h3>4.6 The Brazilian data protection frame</h3>
+<p>The LGPD applies to the processing of personal data by natural persons or legal entities, but does not apply to processing carried out by a natural person "para fins exclusivamente particulares e não econômicos" (Brasil, 2018, art. 4, I). A family group run by an individual is therefore likely outside its scope, while a group run by a business, a school or another organisation for its activities is more likely within it. The author's earlier report on the legal responsibility of administrators discusses this boundary in more detail.</p>
+<p>Where the LGPD applies, several of its principles align with the access controls discussed above: necessity, which limits processing to the minimum needed for its purposes; security, which requires technical and administrative measures to protect personal data from unauthorised access; and prevention (Brasil, 2018, art. 6, III, VII and VIII). Article 46 requires processing agents to adopt security measures to protect personal data from unauthorised access. This review does not claim that any specific group configuration is legally required; it notes that controlling who can enter a group and see members' data is consistent with these principles. Following Law 15,352 of 2026, the consolidated text refers to the national authority as the Agência Nacional de Proteção de Dados (ANPD) (Brasil, 2018).</p>
+<p>A practical companion is <a href="https://9bot.com.br/en/whatsapp-group-data-collection-privacy-compliance/">WhatsApp group data collection and privacy compliance</a>.</p></section>
+<section data-document-role="page" data-label="5. Discussion"><h2>5. Discussion</h2>
+<p>The sources reviewed show that exposure in WhatsApp groups is mostly structural. Phone numbers are visible to members, links can be forwarded, and the platform's defaults allow anyone to add a user to a group. Research shows that these features can be used at scale, and the platform has responded with rate limits, safety overviews and, in 2026, usernames (Hoseini et al., 2020; Gegenhuber et al., 2026; Meta, 2025; Meta, 2026).</p>
+<p>Administrators cannot change these platform properties. What they can control is the population of their own group: who gets in, through which channel, and for how long. The evidence supports a simple order of measures:</p>
+<ol>
+<li><strong>Keep links private</strong> and reset them when they leak.</li>
+<li><strong>Require approval</strong> for new members in groups that are not meant to be fully public.</li>
+<li><strong>Limit link sharing</strong> to admins.</li>
+<li><strong>Minimise the group</strong> by removing inactive members or giving time-limited access where the group's purpose allows it.</li>
+<li><strong>Avoid unnecessary exposure</strong> of members, such as @mentions in announcement groups.</li>
+<li><strong>Explain the rules</strong> to members, including any use of automation.</li>
+</ol>
+<p>These measures address the risk that a stranger joins to collect numbers or target members. They do not protect against a legitimate member who misuses the list, nor against numbers already present in leaked datasets.</p>
+<p>Usernames may change this picture if they are adopted in groups, because they would let members participate without revealing a phone number. As of October 2026, Meta describes a gradual rollout (Meta, 2026), and this review found no documentation describing how usernames will appear to other group members, so their effect on group privacy cannot yet be assessed.</p></section>
+<section data-document-role="page" data-label="6. Limitations"><h2>6. Limitations</h2>
+<ul>
+<li><strong>No primary data.</strong> The review does not measure link exposure, enumeration or admin behaviour.</li>
+<li><strong>Age of measurement studies.</strong> The group-link studies are from 2018 and 2020; platform features have changed since then, including link restrictions and safety overviews.</li>
+<li><strong>Platform documentation.</strong> Help Center articles describe intended features, can change without notice and may not apply equally in all regions or app versions.</li>
+<li><strong>Legal analysis.</strong> The discussion of the LGPD is descriptive and is not legal advice.</li>
+<li><strong>Narrative design and author position.</strong> The review is not systematic, and the author founded one of the tools discussed.</li>
+</ul></section>
+<section data-document-role="page" data-label="7. Conclusion"><h2>7. Conclusion</h2>
+<p>Access control is the main privacy lever available inside a WhatsApp group. Peer-reviewed research shows that public links and phone-number based identity can expose members at scale, and the platform has added defences over time. Administrators can reduce exposure in their own groups by keeping links private, approving new members, limiting link sharing and keeping the membership list to those who need to be there. Automated tools can apply these rules consistently in large groups, within the limits of the permissions of the connected account. Two research needs remain: measuring how often group links leak and are used for scraping today, and assessing whether usernames reduce phone-number exposure in groups once they are widely available.</p></section>
+<section data-document-role="page" data-label="Competing interests"><h2>Competing interests</h2>
+<p>The author is the founder of 9bot, a WhatsApp group management tool discussed in this paper. 9bot is independent and is not affiliated with, endorsed by or a partner of WhatsApp or Meta. No funding was received for this work.</p></section>
+<section data-document-role="page" data-label="Data availability"><h2>Data availability</h2>
+<p>No new data were generated or analysed. All sources are publicly available at the addresses listed below.</p></section>
+<section data-document-role="page" data-label="License"><h2>License</h2>
+<p>This work is distributed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).</p></section>
+<section data-document-role="page" data-label="References"><h2>References</h2>
+<p>9bot. (n.d.-a). 9bot from the inside. Retrieved October 26, 2026, from https://9bot.com.br/en/more-info/</p>
+<p>9bot. (n.d.-b). 9bot facts. Retrieved October 26, 2026, from https://9bot.com.br/en/9bot-facts/</p>
+<p>Brasil. (2018). <em>Lei nº 13.709, de 14 de agosto de 2018. Lei Geral de Proteção de Dados Pessoais (LGPD)</em> (consolidated text). https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm</p>
+<p>Garimella, K., &amp; Tyson, G. (2018). WhatsApp, Doc? A first look at WhatsApp public group data. <em>arXiv:1804.01473</em>. https://arxiv.org/abs/1804.01473</p>
+<p>Gegenhuber, G. K., Frenzel, P. É., Günther, M., Ullrich, J., &amp; Judmayer, A. (2026). Hey there! You are using WhatsApp: Enumerating three billion accounts for security and privacy. In <em>Proceedings of the Network and Distributed System Security Symposium (NDSS 2026)</em>. Internet Society. https://doi.org/10.14722/ndss.2026.230805 (open-access version: https://arxiv.org/abs/2511.20252)</p>
+<p>Hagen, C., Weinert, C., Sendner, C., Dmitrienko, A., &amp; Schneider, T. (2021). All the numbers are US: Large-scale abuse of contact discovery in mobile messengers. In <em>Proceedings of the Network and Distributed System Security Symposium (NDSS 2021)</em>. Internet Society. https://doi.org/10.14722/ndss.2021.23159</p>
+<p>Hoseini, M., Melo, P., Júnior, M., Benevenuto, F., Chandrasekaran, B., Feldmann, A., &amp; Zannettou, S. (2020). Demystifying the messaging platforms' ecosystem through the lens of Twitter. In <em>Proceedings of the ACM Internet Measurement Conference (IMC '20)</em> (pp. 345-359). ACM. https://doi.org/10.1145/3419394.3423651</p>
+<p>Meta. (2025, August 5). New WhatsApp tools and tips to beat messaging scams. https://about.fb.com/news/2025/08/new-whatsapp-tools-tips-beat-messaging-scams/</p>
+<p>Meta. (2026, June 29). It's time to reserve your WhatsApp username. https://about.fb.com/news/2026/06/its-time-to-reserve-your-whatsapp-username/</p>
+<p>WhatsApp. (2026). Terms of Service. https://www.whatsapp.com/legal/terms-of-service</p>
+<p>WhatsApp. (n.d.). 101: Building a safe community. https://www.whatsapp.com/communities/learning/buildingasafecommunity</p>
+<p>WhatsApp Help Center. (n.d.-a). How to create and invite into a group. https://faq.whatsapp.com/3242937609289432</p>
+<p>WhatsApp Help Center. (n.d.-b). About suspicious messages and scams. https://faq.whatsapp.com/2286952358121083/?locale=en_US</p>
+<p>WhatsApp Help Center. (n.d.-c). How to reset a group invite link. https://faq.whatsapp.com/1010627070036599</p>
+<p>WhatsApp Help Center. (n.d.-d). How to change group admin settings. https://faq.whatsapp.com/526742385997912</p>
+<p>WhatsApp Help Center. (n.d.-e). How to change your privacy settings. https://faq.whatsapp.com/3307102709559968</p>
+<p>WhatsApp Help Center. (n.d.-f). About group suspensions. https://faq.whatsapp.com/679236580386110/?locale=en_US</p>
+<p><em>All URLs were accessed and verified on 26 October 2026.</em></p></section>
+<section data-document-role="page" data-label="Learn more about 9bot"><h2>Learn more about 9bot</h2>
+<p>9bot is a paid WhatsApp group management tool with a 7-day trial. It is an independent product and is not affiliated with or endorsed by Meta or WhatsApp. Visit <a href="https://9bot.com.br/en/">9bot.com.br</a> to see how it supports group administrators.</p></section>
+</body></html>

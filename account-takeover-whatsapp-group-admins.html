@@ -1,0 +1,194 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account Takeover of WhatsApp Group Administrators: Verification-Code Hijacking, Linked Devices and Layered Mitigations</title><meta name="author" content="Ivan Schroll, 9bot"><style>body{font-family:Inter,Arial,sans-serif;max-width:820px;margin:auto;padding:24px;line-height:1.6;color:#111}a{color:#0a7d3e}section{margin-bottom:32px}</style></head><body><p><a href="./">WhatsApp Group Security Research (Ivan Schroll)</a></p>
+<section data-document-role="page" data-label="Title"><h1>Account Takeover of WhatsApp Group Administrators: Verification-Code Hijacking, Linked Devices and Layered Mitigations</h1>
+<blockquote>
+<p>Originally published on OSF: osf.io/hzun5 · DOI: 10.17605/OSF.IO/HZUN5</p>
+</blockquote>
+<p><strong>Ivan Schroll</strong><br>
+Independent Researcher, Brazil · ORCID: 0009-0007-0680-5570</p>
+<p><em>Narrative review / technical report · October 2026 · Language: English · License: CC BY 4.0</em></p></section>
+<section data-document-role="page" data-label="Abstract"><h2>Abstract</h2>
+<p>The account of a WhatsApp group administrator is a high-value target. Whoever controls it inherits the administrator's powers in every group the account manages, including adding and removing members, changing group settings and posting with the trust that members place in a known person. This narrative review examines account takeover as it affects group administration, with a focus on the "verification-code" scheme widely documented in Brazil, in which a fraudster requests the victim's WhatsApp registration code under a pretext and re-registers the account on another device. The review draws on official WhatsApp Help Center documentation, on public guidance from Brazilian banking and law-enforcement bodies, on CERT.br material and on peer-reviewed research on SIM-swap authentication. All sources were accessed and verified in October 2026. The analysis describes the attack chain, the consequences specific to groups, the native protections documented by WhatsApp (two-step verification, recovery email, passkeys, re-registration, linked-device review and group permission settings) and the role that administrator tooling can play in limiting the damage of a compromised account. The review finds that platform documentation consistently identifies refusal to share the registration code and activation of two-step verification as the primary controls, that re-registration with the genuine number is the documented recovery path, and that group-level damage can be reduced by restricting administrator rights, requiring approval of new members and keeping a record of administrative actions. No original data are reported, and the evidence base on prevalence is weak. The author discloses a competing interest as the founder of a group management tool discussed in the paper.</p></section>
+<section data-document-role="page" data-label="Keywords"><h2>Keywords</h2>
+<p>WhatsApp; account takeover; verification code; two-step verification; SIM swap; social engineering; group administration; Brazil; cybersecurity; online fraud</p></section>
+<section data-document-role="page" data-label="1. Introduction"><h2>1. Introduction</h2>
+<p>Group administrators on WhatsApp hold a set of powers that ordinary members do not. Depending on the group's permission settings, admins decide who can add members, who can share invite links, who can edit group information and whether new members must be approved before joining (WhatsApp Help Center, n.d.-a). WhatsApp's own guidance for community leaders asks admins to "look out for anyone trying to take over your account" and to encourage members to use two-step verification (WhatsApp, n.d.-a). This guidance points to a risk that is easy to overlook: the security of a group depends in part on the security of the individual accounts of the people who run it.</p>
+<p>In Brazil, a scheme commonly described in Portuguese as "clonagem" or "sequestro" of WhatsApp accounts has been the subject of repeated public warnings. The Brazilian Federation of Banks (FEBRABAN) describes a scheme in which fraudsters, knowing the victim's name and phone number, attempt to register the victim's WhatsApp on their own device and then contact the victim pretending to be a customer service agent, asking for the security code that the application has sent by SMS (FEBRABAN, 2025). With that code, according to FEBRABAN, the fraudsters replicate the account on another phone and message the victim's contacts asking for money, typically through Pix transfers to third-party accounts. The Civil Police of São Paulo and of Mato Grosso, and the Public Prosecutor's Office of the Federal District and Territories, publish similar descriptions and guidance (Polícia Civil do Estado de São Paulo, n.d.; Polícia Judiciária Civil de Mato Grosso, n.d.; MPDFT, n.d.).</p>
+<p>Most of this public guidance addresses the individual victim and the victim's personal contacts. Less attention has been paid to what happens to the groups that a hijacked account administers. This review asks three questions:</p>
+<ol>
+<li>How does account takeover through verification-code hijacking work, according to official and institutional sources?</li>
+<li>What consequences follow for WhatsApp groups when the hijacked account belongs to an administrator?</li>
+<li>Which mitigations are documented at the platform level, and which can be applied at the level of group administration and tooling?</li>
+</ol>
+<p>This paper is part of a series by the same author on the governance of WhatsApp groups. Earlier reports addressed moderation and safety governance in general and the legal position of group administrators. This report is narrower and concentrates on account security.</p></section>
+<section data-document-role="page" data-label="2. Background"><h2>2. Background</h2>
+<h3>2.1 Registration and verification on WhatsApp</h3>
+<p>WhatsApp accounts are tied to phone numbers. According to the Help Center, registering or re-registering an account requires a 6-digit registration code sent by SMS or phone call, and in some cases by email if the user has previously added and verified an email address (WhatsApp Help Center, n.d.-b). The same page states that verifying the phone number with a registration code is the only way to activate an account, that WhatsApp can be used with only one phone number at a time, and that after a successful registration "anyone who might be using your account is automatically logged out". The page closes with an explicit instruction: "Never share your 6-digit registration code or password with anyone."</p>
+<p>Two-step verification is a separate, optional layer. When it is turned on, the user is asked for an additional secret after registration. The Help Center notes that WhatsApp is upgrading the original 6-digit PIN to a password (WhatsApp Help Center, n.d.-b). WhatsApp's privacy checkup also lists passkeys and a recovery email among the options for "adding more protection to your account" (WhatsApp Help Center, n.d.-c).</p>
+<h3>2.2 Linked devices</h3>
+<p>A WhatsApp account can be used on more than one device. The Help Center explains that a primary phone can link up to four companion devices and that companion phones are logged out if WhatsApp is not used on the primary phone for over 14 days (WhatsApp Help Center, n.d.-d). The linking process uses a QR code scanned by the primary phone, protected by the primary phone's biometric or device lock. Linked devices are therefore a second surface to review when an account may have been compromised.</p>
+<h3>2.3 SIM swap as a parallel vector</h3>
+<p>Because registration relies on codes delivered to the phone number, control of the number itself is a security dependency. Lee, Kaiser, Mayer and Narayanan (2020) studied the authentication procedures used by five prepaid wireless carriers in the United States when customers request a SIM change. They reported that the carriers used authentication challenges that attackers could subvert, and they identified online services whose accounts could be compromised through a SIM swap alone. Their study concerns the United States and does not measure WhatsApp specifically, but it shows that SMS delivery of codes inherits the weaknesses of carrier customer service procedures.</p></section>
+<section data-document-role="page" data-label="3. Method"><h2>3. Method</h2>
+<h3>3.1 Design</h3>
+<p>This is a narrative review in the form of a technical report. It does not follow a systematic review protocol and reports no original data. Its aim is to assemble verifiable documentation into a coherent account of a threat and of the available responses.</p>
+<h3>3.2 Sources and search</h3>
+<p>Searches were carried out between 20 and 26 October 2026 using general web search and direct navigation of official sites. Search terms in English and Portuguese included "WhatsApp two-step verification", "WhatsApp compromised account", "linked devices", "clonagem WhatsApp código", "sequestro de perfil WhatsApp" and "SIM swap authentication". Four groups of sources were included:</p>
+<ul>
+<li>official WhatsApp Help Center articles, WhatsApp community guidance and the WhatsApp Terms of Service;</li>
+<li>public guidance from Brazilian institutions (FEBRABAN, state Civil Police, the Public Prosecutor's Office of the Federal District and CERT.br);</li>
+<li>peer-reviewed research on authentication and account security;</li>
+<li>the public product documentation of 9bot, used only to describe which tooling features exist, not to evaluate them.</li>
+</ul>
+<p>Each reference was opened at its published address in October 2026. Claims were taken only from text that could be read at that address. Help Center pages are undated and may change; they are cited as "n.d." and should be read as describing the platform at the time of access.</p>
+<h3>3.3 Exclusions</h3>
+<p>News reports of individual incidents were excluded unless they reported on official statements, because they rarely allow verification of the underlying facts. Commercial security vendor blogs were excluded. Prevalence figures were sought but no official, verifiable figure specific to WhatsApp account takeover in Brazil was found, so none is reported.</p></section>
+<section data-document-role="page" data-label="4. Findings"><h2>4. Findings</h2>
+<h3>4.1 The verification-code attack chain</h3>
+<p>Combining the institutional descriptions, the verification-code scheme can be summarised in four steps.</p>
+<ol>
+<li><strong>Target selection.</strong> The fraudster obtains the victim's name and phone number (FEBRABAN, 2025). Sources do not specify a single origin; phone numbers are visible to other members in WhatsApp groups, a point discussed in the companion report on member privacy.</li>
+<li><strong>Code trigger.</strong> The fraudster starts a WhatsApp registration for the victim's number on a device under the fraudster's control, which causes WhatsApp to send a registration code to the genuine owner (FEBRABAN, 2025).</li>
+<li><strong>Pretext.</strong> The fraudster contacts the victim, posing for example as an e-commerce customer service agent or a bank, and asks for "a code" described as a protocol number, an update, a promotional code or a confirmation of registration (FEBRABAN, 2025; Polícia Civil do Estado de São Paulo, n.d.).</li>
+<li><strong>Re-registration and monetisation.</strong> Once the code is entered, the account is registered on the fraudster's device. The fraudster then messages the victim's contacts, impersonating the victim and asking for urgent transfers (FEBRABAN, 2025; Polícia Civil do Estado de São Paulo, n.d.).</li>
+</ol>
+<p>The WhatsApp Help Center adds a technical detail that limits one part of the harm. Because messages are end-to-end encrypted and stored on the device, someone re-registering the account on a new device cannot read past conversations (WhatsApp Help Center, n.d.-e). The Civil Police of Mato Grosso make the same point and add the observation most relevant to this paper: the attackers "estarão automaticamente inseridos nos grupos dos quais ela faz parte", that is, they are automatically present in the groups to which the victim belongs (Polícia Judiciária Civil de Mato Grosso, n.d.).</p>
+<p>A variant of the scheme, in which the attacker who has taken over the account also enables two-step verification with a secret the victim does not know, is anticipated in the Help Center. It states that "in rare cases, someone else using your account might have enabled two-step verification" and that a user without the PIN must wait 7 days before trying again (WhatsApp Help Center, n.d.-e).</p>
+<h3>4.2 Consequences specific to groups</h3>
+<p>The institutional sources focus on direct requests for money to the victim's contacts. When the victim is a group administrator, the consequences extend further. The following consequences follow logically from documented platform features rather than from measured incidents, and are presented as such.</p>
+<ul>
+<li><strong>Inherited trust.</strong> Messages in a group appear under the name and number of a known member. In a group where the admin regularly posts announcements, a fraudulent message from the admin's account carries the admin's credibility. FEBRABAN's warning about requests "pretending to be the person" applies with greater reach in a group of hundreds of members than in a one-to-one chat (FEBRABAN, 2025).</li>
+<li><strong>Inherited powers.</strong> Admin settings documented by WhatsApp include control over who can edit group settings, who can add members, who can share invite links and whether new members need approval (WhatsApp Help Center, n.d.-a). An attacker with admin rights could in principle change these settings, add accounts, remove legitimate admins or share the group link. The Building a Safe Community guide lists among admin concerns anyone trying to "add or remove members" (WhatsApp, n.d.-a).</li>
+<li><strong>Collective enforcement risk.</strong> WhatsApp may suspend a group or ban accounts for violations of its Terms of Service, including spam and scams (WhatsApp Help Center, n.d.-f; WhatsApp, 2026). Abusive content posted from a hijacked admin account could expose the group itself to reports. The available documentation does not say how WhatsApp treats groups whose violations originate from a compromised account, and this remains an open question.</li>
+<li><strong>Recovery burden.</strong> Brazilian police guidance asks friends and family to remove the cloned number from groups and to alert common contacts (Polícia Civil do Estado de São Paulo, n.d.). In a group where the hijacked account is the only admin, no one may have the rights needed to do this.</li>
+</ul>
+<p>For a plain overview of what an admin account can do, see <a href="https://9bot.com.br/en/whatsapp-group-admin-powers/">WhatsApp group admin powers</a>.</p>
+<h3>4.3 Platform-level mitigations</h3>
+<p>WhatsApp documents several controls that apply before, during and after a takeover attempt.</p>
+<p><strong>Prevention.</strong></p>
+<ul>
+<li><em>Never share the registration code.</em> This is the single most repeated instruction across all sources (WhatsApp Help Center, n.d.-b; n.d.-e; FEBRABAN, 2025; Polícia Civil do Estado de São Paulo, n.d.).</li>
+<li><em>Two-step verification.</em> FEBRABAN recommends enabling it under Settings, Account, Two-step verification, and describes it as making cloning "muito mais difícil" (much harder) (FEBRABAN, 2025). WhatsApp's community guidance asks admins to promote it among members (WhatsApp, n.d.-a).</li>
+<li><em>Passkeys and recovery email.</em> Listed in WhatsApp's privacy checkup as additional account protections (WhatsApp Help Center, n.d.-c).</li>
+<li><em>Registration notifications.</em> WhatsApp states that it notifies the user when someone tries to register an account with the user's phone number (WhatsApp Help Center, n.d.-e). Such a notification is an early signal that a code request is not legitimate.</li>
+<li><em>Profile photo visibility.</em> FEBRABAN recommends showing the profile photo only to contacts, to make impersonation harder (FEBRABAN, 2025). By default, any user can see a profile photo unless the setting is changed (WhatsApp Help Center, n.d.-g).</li>
+</ul>
+<p><strong>Recovery.</strong></p>
+<ul>
+<li><em>Re-registration.</em> The documented path is to log back in with the genuine number and enter the 6-digit code, which automatically logs out all devices logged into the account (WhatsApp Help Center, n.d.-e).</li>
+<li><em>Waiting period.</em> If the attacker has set two-step verification, the user who does not know the PIN must wait 7 days and try again; the attacker is nonetheless logged out after the genuine user enters the SMS code (WhatsApp Help Center, n.d.-e).</li>
+<li><em>Linked-device review.</em> WhatsApp recommends reviewing linked devices after re-registration (WhatsApp Help Center, n.d.-e).</li>
+<li><em>Caution with reports.</em> The Help Center warns that reporting one's own compromised account may lead to its ban and recommends trying to recover it first (WhatsApp Help Center, n.d.-e). Brazilian police guidance, in contrast, recommends emailing WhatsApp support to request temporary deactivation and asking contacts to report the number (Polícia Judiciária Civil de Mato Grosso, n.d.; Polícia Civil do Estado de São Paulo, n.d.). The two pieces of advice target different goals, account recovery and stopping ongoing fraud, and a victim may need to weigh them.</li>
+<li><em>Police report.</em> Brazilian guidance recommends filing an electronic police report and, for those who paid, contacting the bank immediately (Polícia Civil do Estado de São Paulo, n.d.). CERT.br advises alerting contacts through other channels and contesting Pix transfers through the bank's official channels, which triggers the Special Return Mechanism (MED) (CERT.br, n.d.).</li>
+</ul>
+<p><strong>Limits of platform controls.</strong> WhatsApp states that it cannot provide information about who accessed an account or when and where it was accessed, and that it cannot block or unblock contacts on a user's behalf (WhatsApp Help Center, n.d.-e). It also states that an account cannot be recovered without a SIM card with the same phone number (WhatsApp Help Center, n.d.-e). This places SIM security, and therefore carrier procedures of the kind studied by Lee et al. (2020), within the account's trust boundary.</p>
+<h3>4.4 Group-level mitigations available to administrators</h3>
+<p>Beyond protecting their own accounts, administrators can configure groups so that the takeover of any single account causes less damage. The following measures rely on settings documented by WhatsApp.</p>
+<ul>
+<li><strong>More than one admin, fewer than all.</strong> If a group has a single admin and that account is hijacked, no one else can remove it. If every member is an admin, any hijacked member account inherits full powers. Restricting group settings so that only admins can edit them (WhatsApp Help Center, n.d.-a) narrows the set of accounts whose compromise matters.</li>
+<li><strong>Approve new members.</strong> When turned on, admins must approve anyone who wants to join (WhatsApp Help Center, n.d.-a). This limits the ability of an attacker to bring accomplice accounts in through a shared link, although an attacker holding an admin account could approve them.</li>
+<li><strong>Restrict link sharing and reset links.</strong> Admins can decide whether members can share invite links, and admins can reset a link so that the previous one stops working (WhatsApp Help Center, n.d.-a; n.d.-h). Resetting the link after a suspected takeover prevents its further use.</li>
+<li><strong>Delete for everyone.</strong> Admins can delete messages from members for everyone; WhatsApp's community guidance mentions deletion for up to 2.5 days after a message is sent (WhatsApp, n.d.-a; WhatsApp Help Center, n.d.-i).</li>
+<li><strong>Out-of-band verification norms.</strong> CERT.br suggests agreeing on a "password" that only the real person can answer and asking people to call the number they already know (CERT.br, n.d.). A group rule that admins never ask for money or codes in the group, published in the group description, applies this advice at group scale.</li>
+</ul>
+<p>A practical walkthrough of these settings is in <a href="https://9bot.com.br/en/security-settings-large-whatsapp-groups/">security settings for large WhatsApp groups</a>.</p>
+<p>Admin rights can be reviewed with the steps in <a href="https://9bot.com.br/en/add-change-remove-whatsapp-group-admin/">how to add, change or remove a WhatsApp group admin</a>.</p>
+<h3>4.5 The role of third-party administration tools</h3>
+<p>Third-party tools that act in groups through a connected WhatsApp number do not change the security of members' personal accounts and cannot prevent a member from sharing a registration code. Their potential contribution is limited to reducing damage inside the groups they are configured to manage. To make this concrete and to avoid overstatement, this section maps the threat to features that one such tool, 9bot, documents publicly (9bot, n.d.-a; 9bot, n.d.-b). The author is the founder of 9bot (see the competing-interests statement). 9bot is not affiliated with, endorsed by or a partner of WhatsApp or Meta, and the effectiveness of these features against account takeover has not been measured.</p>
+<table>
+<thead>
+<tr>
+<th>Damage path after takeover</th>
+<th>Relevant documented feature</th>
+<th>Limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hijacked account posts phishing or payment links</td>
+<td>Link moderation with an allow list and automatic removal</td>
+<td>Ineffective against payment requests without links, or links on the allow list</td>
+</tr>
+<tr>
+<td>Hijacked account floods the group</td>
+<td>Anti-spam and anti-flood rules; strikes and a punishment ladder</td>
+<td>Thresholds must be set; a careful attacker can stay below them</td>
+</tr>
+<tr>
+<td>Accomplice accounts join through the link</td>
+<td>Member approval with filters, daily limits and approval history</td>
+<td>An attacker with WhatsApp admin rights can still add members natively</td>
+</tr>
+<tr>
+<td>Unclear what happened and when</td>
+<td>Moderation history and a record of executed actions</td>
+<td>Records actions taken through the tool, not actions taken in the WhatsApp app</td>
+</tr>
+<tr>
+<td>Team members need management access</td>
+<td>Access per user in the dashboard</td>
+<td>Reduces the need to grant WhatsApp admin rights only if the team chooses to work that way</td>
+</tr>
+<tr>
+<td>AI assistant performs sensitive group actions</td>
+<td>MCP server with verified identity, scoped access, confirmation of sensitive actions and audit history</td>
+<td>Applies only to actions requested through the MCP interface</td>
+</tr>
+</tbody>
+</table>
+<p>Two further points follow from how such tools operate. First, 9bot documents that customers connect their own WhatsApp number by pairing code or QR code and add that number to their groups (9bot, n.d.-b). That number is itself an account with admin powers and should receive the same protections as any admin account, in particular two-step verification. Second, WhatsApp's Terms of Service and community guidance restrict bulk messaging, auto-messaging and other unauthorised automation (WhatsApp, 2026; WhatsApp, n.d.-a). Administrators who adopt any third-party automation should review how their use relates to these terms.</p>
+<p>How member approval can be automated is described in <a href="https://9bot.com.br/en/auto-approve-whatsapp-group-members/">auto approve WhatsApp group members</a>.</p>
+<p>Background on the tool discussed here is in <a href="https://9bot.com.br/en/9bot-facts/">9bot facts</a> and <a href="https://9bot.com.br/en/more-info/">9bot from the inside</a>.</p></section>
+<section data-document-role="page" data-label="5. Discussion"><h2>5. Discussion</h2>
+<p>The sources reviewed agree on the core of the problem. Account takeover through verification-code hijacking is a social engineering attack, not a cryptographic one. The registration code works exactly as designed; the vulnerability is that a person can be persuaded to hand it over. This is consistent with Europol's assessment that the human factor "still remains the weakest link in most cyber defence scenarios" (Europol, 2024).</p>
+<p>The group dimension changes the scale of the harm. A personal account takeover exposes a person's contact list. An admin account takeover additionally exposes every member of every group the person administers, together with the power to change who belongs to those groups. Yet the public guidance reviewed is almost entirely addressed to individuals. Only WhatsApp's community guidance explicitly asks admins to watch for account takeover and to promote two-step verification among members (WhatsApp, n.d.-a).</p>
+<p>A layered model emerges from the documentation:</p>
+<ol>
+<li><strong>Account layer:</strong> registration code secrecy, two-step verification, passkeys, recovery email, registration notifications, linked-device review.</li>
+<li><strong>Number layer:</strong> carrier security for SIM changes, outside WhatsApp's control (Lee et al., 2020).</li>
+<li><strong>Group configuration layer:</strong> admin-only settings, approval of new members, link control and reset, a sensible number of admins.</li>
+<li><strong>Tooling layer:</strong> automated filtering of links and floods, approval rules and action records, which reduce but do not prevent damage.</li>
+<li><strong>Response layer:</strong> re-registration, contacting the bank and the MED for Pix losses, police report, communication with members through another channel.</li>
+</ol>
+<p>The layers are complementary. Tooling cannot replace account security, and account security cannot fully prevent a SIM-based attack. The most effective intervention in the reviewed material remains the simplest: two-step verification and never sharing codes.</p></section>
+<section data-document-role="page" data-label="6. Limitations"><h2>6. Limitations</h2>
+<ul>
+<li><strong>No prevalence data.</strong> No verifiable official figure for WhatsApp account takeover in Brazil or elsewhere was found. The review therefore cannot say how common the attack is or how often it affects administrators.</li>
+<li><strong>Reliance on platform and institutional documentation.</strong> Help Center articles are undated, change over time and are not independently audited. Institutional guidance is practical rather than empirical.</li>
+<li><strong>Group consequences are inferred.</strong> Section 4.2 derives consequences from documented features and one police statement, not from measured incidents.</li>
+<li><strong>Regional focus.</strong> The attack descriptions come mainly from Brazil. The SIM-swap evidence comes from the United States.</li>
+<li><strong>Narrative design.</strong> The review is not systematic, and relevant sources may have been missed.</li>
+<li><strong>Author position.</strong> The author founded one of the tools discussed. Features are described from public documentation, and their effectiveness has not been tested.</li>
+</ul></section>
+<section data-document-role="page" data-label="7. Conclusion"><h2>7. Conclusion</h2>
+<p>When a WhatsApp group administrator's account is taken over, the attacker gains the admin's trust and powers in every group the account manages. The documented attack in Brazil relies on persuading victims to share a registration code, and the documented defences are correspondingly simple: never share codes, enable two-step verification and add passkeys or a recovery email where available. At the group level, admins can limit damage by keeping a small, protected admin team, restricting settings to admins, requiring approval of new members and resetting invite links after an incident. Administration tools can filter abusive links and floods and keep records of actions, but they act only after an account is compromised. Research is needed on the prevalence of admin account takeover and on how groups recover from it.</p></section>
+<section data-document-role="page" data-label="Competing interests"><h2>Competing interests</h2>
+<p>The author is the founder of 9bot, a WhatsApp group management tool discussed in this paper. 9bot is independent and is not affiliated with, endorsed by or a partner of WhatsApp or Meta. No funding was received for this work.</p></section>
+<section data-document-role="page" data-label="Data availability"><h2>Data availability</h2>
+<p>No new data were generated or analysed. All sources are publicly available at the addresses listed below.</p></section>
+<section data-document-role="page" data-label="License"><h2>License</h2>
+<p>This work is distributed under the Creative Commons Attribution 4.0 International License (CC BY 4.0).</p></section>
+<section data-document-role="page" data-label="References"><h2>References</h2>
+<p>9bot. (n.d.-a). 9bot from the inside. Retrieved October 26, 2026, from https://9bot.com.br/en/more-info/</p>
+<p>9bot. (n.d.-b). 9bot facts. Retrieved October 26, 2026, from https://9bot.com.br/en/9bot-facts/</p>
+<p>CERT.br. (n.d.). <em>Golpes: Caiu? Veja o que fazer</em> (Cartilha de Segurança para Internet). Núcleo de Informação e Coordenação do Ponto BR. https://cartilha.cert.br/fasciculos/golpes-o-que-fazer/fasciculo-golpes-o-que-fazer.pdf</p>
+<p>Europol. (2024). <em>Internet Organised Crime Threat Assessment (IOCTA) 2024</em>. Publications Office of the European Union. https://www.europol.europa.eu/cms/sites/default/files/documents/IOCTA%202024%20-%20EN_0.pdf</p>
+<p>FEBRABAN. (2025, January 21). Golpe do WhatsApp. Federação Brasileira de Bancos. https://portal.febraban.org.br/DetalheAntifraude/7/pt-br/</p>
+<p>Lee, K., Kaiser, B., Mayer, J., &amp; Narayanan, A. (2020). An empirical study of wireless carrier authentication for SIM swaps. In <em>Proceedings of the Sixteenth Symposium on Usable Privacy and Security (SOUPS 2020)</em> (pp. 61-79). USENIX Association. https://www.usenix.org/conference/soups2020/presentation/lee</p>
+<p>MPDFT. (n.d.). <em>Sugestões para o uso seguro do WhatsApp</em>. Ministério Público do Distrito Federal e Territórios. https://www.mpdft.mp.br/portal/pdf/imprensa/cartilhas/cartilha_sugestoes_uso_seguro_whatsapp_mpdft.pdf</p>
+<p>Polícia Civil do Estado de São Paulo. (n.d.). <em>Delitos praticados por meios eletrônicos: perguntas e respostas</em>. https://www.policiacivil.sp.gov.br/portal/imagens/CRIMES%20CIBERN%C3%89TICOS%20-%20PERGUNTAS%20E%20RESPOSTAS%20V2.pdf</p>
+<p>Polícia Judiciária Civil de Mato Grosso. (n.d.). Polícia Civil orienta o que fazer em caso de sequestro de perfil de WhatsApp. https://www.pjc.mt.gov.br/-/pol%C3%ADcia-civil-orienta-o-que-fazer-em-caso-de-sequestro-de-perfil-de-whatsapp</p>
+<p>WhatsApp. (2026). Terms of Service. https://www.whatsapp.com/legal/terms-of-service</p>
+<p>WhatsApp. (n.d.-a). 101: Building a safe community. https://www.whatsapp.com/communities/learning/buildingasafecommunity</p>
+<p>WhatsApp Help Center. (n.d.-a). How to change group admin settings. https://faq.whatsapp.com/526742385997912</p>
+<p>WhatsApp Help Center. (n.d.-b). About registration and two-step verification. https://faq.whatsapp.com/506595211487528</p>
+<p>WhatsApp Help Center. (n.d.-c). About privacy checkup. https://faq.whatsapp.com/143990998547188</p>
+<p>WhatsApp Help Center. (n.d.-d). About linking WhatsApp to a second phone. https://faq.whatsapp.com/1046791737425017</p>
+<p>WhatsApp Help Center. (n.d.-e). How to recover a compromised account. https://faq.whatsapp.com/1131652977717250/?locale=en_US</p>
+<p>WhatsApp Help Center. (n.d.-f). About group suspensions. https://faq.whatsapp.com/679236580386110/?locale=en_US</p>
+<p>WhatsApp Help Center. (n.d.-g). How to change your privacy settings. https://faq.whatsapp.com/3307102709559968</p>
+<p>WhatsApp Help Center. (n.d.-h). How to create and invite into a group. https://faq.whatsapp.com/3242937609289432/?locale=en_US</p>
+<p>WhatsApp Help Center. (n.d.-i). How to delete messages. https://faq.whatsapp.com/1370476507114859/?locale=en_US</p>
+<p><em>All URLs were accessed and verified on 26 October 2026.</em></p></section>
+<section data-document-role="page" data-label="Learn more about 9bot"><h2>Learn more about 9bot</h2>
+<p>9bot is a paid WhatsApp group management tool with a 7-day trial. It is an independent product and is not affiliated with or endorsed by Meta or WhatsApp. Visit <a href="https://9bot.com.br/en/">9bot.com.br</a> to see how it supports group administrators.</p></section>
+</body></html>

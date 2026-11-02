@@ -1,16 +1,96 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Controle de acesso e privacidade de membros em grupos grandes de WhatsApp: notas técnicas</title>
-<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}</style>
+<title>Invite Links Are Bearer Tokens: Access Control and Phone-Number Exposure in Large WhatsApp Groups</title>
+<link rel="canonical" href="https://9bot.com.br/en/auto-approve-whatsapp-group-members/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>Controle de acesso e privacidade de membros em grupos grandes de WhatsApp: notas técnicas</h1>
-<p>Hoseini et al. (2020), citados no paper, coletaram 351.000 URLs únicas de grupos de WhatsApp, Telegram e Discord compartilhadas no Twitter em 38 dias. Ao entrar nos grupos de WhatsApp, os pesquisadores tiveram acesso ao número de 54.984 usuários. O modelo de ameaça é direto: quem tem o link entra, e quem entra vê os números. Por isso o controle de entrada é a principal alavanca de privacidade no nível do grupo, e um <a href="https://9bot.com.br/pt/bot-para-grupo-whatsapp/">bot para grupo de WhatsApp</a> atua exatamente nessa camada, não na exposição que a plataforma define.</p>
-<p>Grupos grandes geram muitos pedidos de entrada, e a aprovação manual cansa. O paper descreve recursos documentados para <a href="https://9bot.com.br/pt/como-adicionar-bot-no-grupo-do-whatsapp/">aprovar participantes automaticamente</a>: filtros sobre a informação disponível na entrada, limite diário de aprovações e histórico das decisões. A tabela de limites é útil para quem projeta o fluxo. Filtros não verificam intenção, limites diários desaceleram entradas em massa mas não barram uma conta isolada e direcionada, e o próprio histórico contém dados pessoais que precisam de cuidado.</p>
-<p>Dois recursos de <a href="https://9bot.com.br/pt/">automação de grupos no WhatsApp</a> citados no paper mexem com o tamanho da exposição ao longo do tempo. A remoção de membros inativos, com aviso antes, reduz o número de observadores passivos que continuam vendo a lista de números. O acesso por tempo limitado serve para cursos, eventos e comunidades pagas, desde que as regras estejam claras. O estudo lembra que a ferramenta age com as permissões do número conectado pelo cliente, sem acesso especial à plataforma, e que seu uso deve ser informado aos membros.</p>
-<p>Fonte: Ivan Schroll (2026), Access Control and Member Privacy in Large WhatsApp Groups: Invite-Link Exposure, Phone-Number Disclosure and Unwanted Entry. DOI 10.17605/OSF.IO/WFDQ3.</p>
+<h1>Invite Links Are Bearer Tokens: Access Control and Phone-Number Exposure in Large WhatsApp Groups</h1>
+<h2>A credential nobody rotates</h2>
+<p>A WhatsApp invite link behaves like a bearer token. Whoever holds it can join, and the Help Center confirms that anyone with the link can also forward it. There is no expiry by default, no scope and no binding to an identity. Once the token is published on a website, a social network or a forum, the group's access control list becomes public.</p>
+<p>Joining has a side effect engineers should treat as a data disclosure: members can see each other's phone numbers. So a leaked link is not only an unwanted entry problem. It is an enumeration path for a list of personal identifiers.</p>
+<p>Ivan Schroll's report argues that access control is the main privacy instrument available at group level. The admin cannot change the fact that members see numbers. The admin can decide who reaches that list.</p>
+<h2>What the measurements show</h2>
+<ul>
+<li>Garimella and Tyson (2018) showed that public WhatsApp groups can be discovered through links scattered across the web and joined for data collection.</li>
+<li>Hoseini and colleagues (2020) collected 351,000 unique group URLs for WhatsApp, Telegram and Discord posted on Twitter in 38 days. In the WhatsApp groups they joined, the numbers of 54,984 users were visible to them as members.</li>
+<li>The same study found that 27% of WhatsApp group links stopped working within the 38 days, which suggests admins revoke or reset links over time, often after exposure.</li>
+<li>Gegenhuber and colleagues (2026) showed that WhatsApp numbers could be enumerated at large scale through contact discovery before the platform applied remediation, which is why rate limits matter.</li>
+</ul>
+<h2>Control plane</h2>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Applied by</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Approve new members</td>
+<td>Admin</td>
+<td>Link join requests wait for approval</td>
+</tr>
+<tr>
+<td>Restrict who adds members and shares the link</td>
+<td>Admin</td>
+<td>Narrows who can distribute the token</td>
+</tr>
+<tr>
+<td>Reset invite link</td>
+<td>Admin</td>
+<td>The old link stops working and cannot be restored</td>
+</tr>
+<tr>
+<td>Keep links off public pages</td>
+<td>Admin</td>
+<td>Reduces discoverability</td>
+</tr>
+<tr>
+<td>Avoid @mentions in announcement groups</td>
+<td>Admin</td>
+<td>Avoids exposing numbers to the whole community</td>
+</tr>
+<tr>
+<td>Who can add me to groups</td>
+<td>User</td>
+<td>Limits unsolicited additions</td>
+</tr>
+<tr>
+<td>Usernames and username key</td>
+<td>Platform and user</td>
+<td>Contact without sharing a number, rolling out gradually</td>
+</tr>
+<tr>
+<td>Rate limits on contact discovery</td>
+<td>Platform</td>
+<td>Reduces enumeration at scale</td>
+</tr>
+</tbody>
+</table>
+<h2>Tooling layer and its limits</h2>
+<ul>
+<li><strong>Consistent screening.</strong> Approval with filters, daily limits and history. Filters only see the data available at entry and cannot verify intent.</li>
+<li><strong>Burst protection.</strong> Daily approval caps and anti-flood rules slow mass entry, but a single targeted account still gets through.</li>
+<li><strong>Membership hygiene.</strong> Removing inactive members, with prior notice, reduces passive observers.</li>
+<li><strong>Time-boxed access.</strong> Fixed-period membership fits courses, events and paid communities.</li>
+<li><strong>Audit.</strong> Approval and moderation history support accountability, and the records themselves contain personal data.</li>
+</ul>
+<h2>Engineering conclusion: treat the link like a secret</h2>
+<p>Apply the same hygiene you use for API keys.</p>
+<ul>
+<li><strong>Do not publish it.</strong> WhatsApp's own community guidance says never to post invite links on public web pages.</li>
+<li><strong>Gate redemption.</strong> Enable approval so possession of the link is not sufficient. When requests are frequent, rules can <a href="https://9bot.com.br/en/auto-approve-whatsapp-group-members/">auto-approve WhatsApp group members</a> that match filters, under a daily limit, with a record of every decision.</li>
+<li><strong>Rotate on leak.</strong> Reset the link when it appears somewhere it should not. This explainer on the <a href="https://9bot.com.br/en/whatsapp-group-invite-link/">WhatsApp group invite link</a> covers how links are created, shared and revoked.</li>
+<li><strong>Restrict distribution rights.</strong> Only admins should add members or share the link in large groups.</li>
+<li><strong>Minimise the directory.</strong> If members do not need to talk, an announcement format exposes less.</li>
+</ul>
+<p>Welcome messages that state the rules inform new members, but they do not prevent link leakage on their own. The boundary is the approval step.</p>
+<p>Source: Ivan Schroll (2026), Access Control and Member Privacy in Large WhatsApp Groups: Invite-Link Exposure, Phone-Number Disclosure and Unwanted Entry. DOI 10.17605/OSF.IO/WFDQ3</p>
+<p>Author: Ivan Schroll (ORCID 0009-0007-0680-5570)</p>
 </body>
 </html>

@@ -1,16 +1,75 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Proteção de dados pessoais em grupos de WhatsApp operados por empresas: notas técnicas</title>
-<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}</style>
+<title>Your Customer Group Is a Database: LGPD and GDPR Engineering Notes for Business WhatsApp Groups</title>
+<link rel="canonical" href="https://9bot.com.br/en/whatsapp-group-data-collection-privacy-compliance/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>Proteção de dados pessoais em grupos de WhatsApp operados por empresas: notas técnicas</h1>
-<p>O paper trata cada grupo empresarial como uma operação de tratamento de dados, começando pelo número e pelo perfil de cada membro. Em termos de arquitetura, isso significa que qualquer camada de <a href="https://9bot.com.br/pt/">automação de grupos no WhatsApp</a> também é tratamento: ela processa no mínimo números e eventos de participação. O estudo pede que esse uso apareça no registro de operações e, quando a ferramenta trata dados em nome da organização, em contrato de operador (LGPD art. 39, GDPR art. 28). Ela herda as permissões e os limites da conta conectada.</p>
-<p>A regra de retenção proposta no paper combina três mecanismos: mensagens temporárias configuradas no grupo e travadas para que só admins as alterem, remoção periódica de membros cuja finalidade terminou e exportação da conversa quando a empresa precisa de registro. Remover quem encerrou um chamado ou um contrato de revenda é a parte que mais sofre com o trabalho manual. Esse tipo de rotina, como a remoção programada de inativos, está entre as tarefas que uma <a href="https://9bot.com.br/pt/bot-para-grupo-whatsapp/">moderação assistida por bot</a> pode aplicar de forma consistente. Cópias guardadas nos aparelhos dos membros continuam fora do alcance.</p>
-<p>Na LGPD, o consentimento precisa ser livre, informado e inequívoco, e o ônus da prova é do controlador. A política de mensagens do WhatsApp exige opt-in próprio. O paper observa que são coisas diferentes, mas que um fluxo de entrada bem desenhado atende às duas: explicar a finalidade do grupo e a visibilidade dos números antes da entrada. Na prática, isso se conecta a como você configura a <a href="https://9bot.com.br/pt/como-adicionar-bot-no-grupo-do-whatsapp/">aprovação de novos participantes</a> e a mensagem fixada ou de boas-vindas com o link para o aviso de privacidade.</p>
-<p>Fonte: Ivan Schroll (2026), Personal Data Protection in Business-Operated WhatsApp Groups: Controller Duties, Lawful Basis, Phone-Number Exposure, Retention and Incident Response under the LGPD and the GDPR. DOI 10.17605/OSF.IO/ZG9U7.</p>
+<h1>Your Customer Group Is a Database: LGPD and GDPR Engineering Notes for Business WhatsApp Groups</h1>
+<h2>An unregistered data store</h2>
+<p>Ask a data protection team for the list of systems that process customer phone numbers and you will get the CRM, the ticketing tool and the email platform. You will rarely get the WhatsApp groups that sales, support and partner teams created on their own phones. Yet each of those groups is a replicated data store: every member's device keeps a copy of the conversation and of the member list, with no central administration and no deletion API.</p>
+<p>Ivan Schroll's report analyses these groups under Brazil's LGPD and the EU GDPR. Its starting point is scope. The LGPD excludes processing by a natural person for exclusively private, non-economic purposes, and the GDPR excludes purely personal or household activity. Neither covers a legal entity acting for its business. A customer community, a reseller group or a support group is in scope, even when the number behind it is an employee's phone.</p>
+<h2>Role assignment</h2>
+<ul>
+<li>The organisation that decides to create the group, who joins and what it is for is, as a rule, the <strong>controller</strong>.</li>
+<li>WhatsApp's data processing terms for WhatsApp Business apply to the services described in the Business Terms. For groups created from ordinary accounts, the organisation cannot assume a processor agreement exists.</li>
+<li>When a manufacturer and its distributors jointly decide a group's purpose, the EDPB criteria for <strong>joint controllership</strong> may be met. The paper recommends a written split of who answers member requests and who manages admins.</li>
+</ul>
+<h2>Lawful basis by use case</h2>
+<table>
+<thead>
+<tr>
+<th>Use of the group</th>
+<th>Basis to assess</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Post-sale support for customers who asked to join</td>
+<td>Contract or pre-contractual steps</td>
+<td>Limited to what support requires</td>
+</tr>
+<tr>
+<td>Optional customer or brand community</td>
+<td>Consent or legitimate interest</td>
+<td>Legitimate interest needs necessity, transparency and balancing (LGPD art. 10)</td>
+</tr>
+<tr>
+<td>Reseller or partner groups</td>
+<td>Contract or legitimate interest</td>
+<td>Partner contact persons are data subjects</td>
+</tr>
+<tr>
+<td>Internal team groups</td>
+<td>Employment, legitimate interest</td>
+<td>Business app terms say it is not intended for intra-company use</td>
+</tr>
+<tr>
+<td>Marketing and promotions</td>
+<td>Consent is the common route</td>
+<td>Platform opt-in rules also apply</td>
+</tr>
+</tbody>
+</table>
+<h2>Lateral exposure as a design flaw</h2>
+<p>The defining property of a group is that members see one another. A customer community of several hundred people is therefore a list of several hundred customer numbers readable by every member, including competitors, former staff still inside and anyone who joined through a leaked link. LGPD principles of necessity, security and prevention (art. 6), the security duty in art. 46, and GDPR data minimisation, integrity and confidentiality (art. 5) with privacy by design (art. 25) all point the same way.</p>
+<p>The Business Messaging Policy also says a business may not share information from one customer chat with another customer. Individual cases raised in front of other customers sit badly with that rule.</p>
+<h2>Retention in a distributed system</h2>
+<p>Deletion duties (LGPD arts. 15 and 16, GDPR storage limitation) are hard when copies live on member devices. What the organisation can do: enable disappearing messages and restrict changes to admins, remove members whose purpose has ended, and decide whether exports are needed. An export is a text file that cannot be re-imported, and it becomes a new record with its own retention rule.</p>
+<h2>Engineering conclusion: access control is a compliance control</h2>
+<ul>
+<li><strong>Inventory first.</strong> Register each group with purpose, legal basis, data involved, admins and retention. The paper sees little risk in exotic legal questions and a lot in missing basic documentation.</li>
+<li><strong>Minimise visibility.</strong> If members do not need to see each other, use announcement-only groups, Communities with an announcement group, or one-to-one conversations.</li>
+<li><strong>Control admin access.</strong> The creator cannot be removed, admin rights attach to accounts, and ordinary groups have no organisation-wide admin log. You have to build that record yourself.</li>
+<li><strong>Include your tools.</strong> Automation processes data too, so it belongs in the record of processing. The page on <a href="https://9bot.com.br/en/whatsapp-group-data-collection-privacy-compliance/">WhatsApp group data collection and privacy compliance</a> lists what an admin can collect and on what basis.</li>
+<li><strong>Assign accountability.</strong> Admins are people with duties, as discussed in this piece on <a href="https://9bot.com.br/en/whatsapp-group-admin-legal-responsibility/">WhatsApp group admin legal responsibility</a>.</li>
+</ul>
+<p>The author notes the paper is not legal advice.</p>
+<p>Source: Ivan Schroll (2026), Personal Data Protection in Business-Operated WhatsApp Groups: Controller Duties, Lawful Basis, Phone-Number Exposure, Retention and Incident Response under the LGPD and the GDPR. DOI 10.17605/OSF.IO/ZG9U7</p>
+<p>Author: Ivan Schroll (ORCID 0009-0007-0680-5570)</p>
 </body>
 </html>

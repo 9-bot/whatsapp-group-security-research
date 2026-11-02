@@ -1,16 +1,80 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sequestro de contas de administradores de grupos de WhatsApp: notas técnicas</title>
-<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}</style>
+<title>Admin Accounts as Privileged Identities: Threat Modelling WhatsApp Group Takeover</title>
+<link rel="canonical" href="https://9bot.com.br/en/security-settings-large-whatsapp-groups/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>Sequestro de contas de administradores de grupos de WhatsApp: notas técnicas</h1>
-<p>No golpe do código de verificação, o atacante não quebra criptografia nenhuma. Ele pede o código de 6 dígitos com um pretexto, registra a conta em outro aparelho e, segundo a Polícia Civil de Mato Grosso citada no paper, passa a estar dentro de todos os grupos da vítima. Quando a vítima é admin, o invasor herda também as permissões. Por isso vale revisar quem tem poder de admin e reduzir esse número, um cuidado que aparece com frequência em guias de <a href="https://9bot.com.br/pt/bot-para-grupo-whatsapp/">bot para grupo de WhatsApp</a> e de configuração de grupos grandes.</p>
-<p>Um dos danos descritos no paper é a entrada de contas cúmplices pelo link do grupo depois que um admin é sequestrado. A configuração nativa "Aprovar novos participantes" obriga cada pedido a passar por um admin, e redefinir o link invalida o anterior. Em grupos com muitos pedidos diários, a revisão manual fica pesada, e é aí que entram regras para <a href="https://9bot.com.br/pt/como-adicionar-bot-no-grupo-do-whatsapp/">aprovar participantes automaticamente</a> com filtros, limite diário e histórico. O próprio paper registra o limite: quem tem direitos de admin no WhatsApp ainda consegue adicionar membros pelo app.</p>
-<p>O paper propõe um modelo em camadas: conta, número, configuração do grupo, ferramentas e resposta. Na camada de ferramentas, a contribuição é reduzir dano, não impedir o sequestro. Filtro de links com lista de permitidos, regras contra flood e registro das ações executadas ajudam a conter um admin comprometido que começa a postar links de pagamento. Há um detalhe pouco lembrado: o número conectado a qualquer ferramenta de <a href="https://9bot.com.br/pt/">automação de grupos no WhatsApp</a> também é uma conta com poder de admin e precisa de verificação em duas etapas como qualquer outra.</p>
-<p>Fonte: Ivan Schroll (2026), Account Takeover of WhatsApp Group Administrators: Verification-Code Hijacking, Linked Devices and Layered Mitigations. DOI 10.17605/OSF.IO/HZUN5.</p>
+<h1>Admin Accounts as Privileged Identities: Threat Modelling WhatsApp Group Takeover</h1>
+<h2>The identity problem behind a chat group</h2>
+<p>Treat a WhatsApp group the way you would treat any shared resource in your infrastructure. It has an access control list (members), a set of privileged principals (admins), a configuration surface (who can edit info, add people, share the invite link, approve joins) and no central identity provider. Each admin is a phone number, and authentication to that number is bound to a one-time registration code delivered over SMS or voice.</p>
+<p>That design means the security of a group with hundreds of members is reduced to the weakest admin endpoint. If one admin hands over a six-digit code to a caller pretending to be a bank or a shop, the attacker does not exploit a vulnerability. They complete a legitimate registration flow on hardware they control, and the platform behaves exactly as specified.</p>
+<p>The report by Ivan Schroll maps this chain using institutional sources from Brazil (FEBRABAN, the civil police of São Paulo and Mato Grosso, MPDFT) and the WhatsApp Help Center. Below is the part most useful to engineers.</p>
+<h2>Attack chain, step by step</h2>
+<ol>
+<li><strong>Target selection.</strong> The attacker obtains a name and phone number. Group membership itself leaks numbers to every participant.</li>
+<li><strong>Code trigger.</strong> A registration for the victim's number is started on an attacker device, so the real owner receives a code.</li>
+<li><strong>Pretext.</strong> The attacker calls or messages, posing as customer service, and asks for "a code" framed as a protocol or confirmation number.</li>
+<li><strong>Re-registration.</strong> The account moves to the attacker's device. Past messages are not readable, because they are end-to-end encrypted and stored locally, but group membership is inherited immediately.</li>
+</ol>
+<p>A variant worth modelling: the attacker enables two-step verification with a PIN the victim does not know. The Help Center states that a user without the PIN must wait 7 days before trying again. That is a week of attacker persistence on a privileged account.</p>
+<h2>Secondary surfaces</h2>
+<ul>
+<li><strong>Linked devices.</strong> A primary phone can link up to four companion devices, and companion phones are logged out after more than 14 days without use of the primary. Linked sessions are a second place to audit after any suspected compromise.</li>
+<li><strong>SIM swap.</strong> Lee, Kaiser, Mayer and Narayanan (2020) showed that five US prepaid carriers used authentication challenges attackers could subvert. SMS delivery of codes inherits carrier support weaknesses.</li>
+</ul>
+<h2>Blast radius mapped to controls</h2>
+<table>
+<thead>
+<tr>
+<th>Damage path after takeover</th>
+<th>Documented control</th>
+<th>Residual limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phishing or payment links posted by the hijacked admin</td>
+<td>Allow-list link filtering that deletes other URLs</td>
+<td>Payment requests without links still pass</td>
+</tr>
+<tr>
+<td>Flooding the group</td>
+<td>Anti-spam and anti-flood thresholds, strikes</td>
+<td>A careful attacker stays under the threshold</td>
+</tr>
+<tr>
+<td>Accomplice accounts joining</td>
+<td>Member approval with filters, daily limits and history</td>
+<td>Native admin rights can still add members</td>
+</tr>
+<tr>
+<td>No forensic trail</td>
+<td>Moderation history and action records</td>
+<td>Only covers actions taken through the tool</td>
+</tr>
+<tr>
+<td>Sensitive actions requested via an AI assistant</td>
+<td>MCP access with verified identity, scoped access, confirmation and audit history</td>
+<td>Only covers the MCP interface</td>
+</tr>
+</tbody>
+</table>
+<p>The paper is explicit that these consequences follow from documented features, not from measured incidents. There are no official figures on how often admin accounts are hijacked.</p>
+<h2>Engineering conclusion: least privilege for group admins</h2>
+<p>The mitigation pattern is the same one you apply to cloud consoles.</p>
+<ul>
+<li><strong>Harden every privileged identity.</strong> Never share the code, enable two-step verification, add a recovery email or passkey where available, and review linked devices on a schedule.</li>
+<li><strong>Avoid a single point of failure.</strong> Keep more than one admin, but not everyone. One admin means no one can remove a cloned number; ten admins means ten phishing targets.</li>
+<li><strong>Lock the configuration plane.</strong> Restrict editing of group settings to admins, require approval for new members and reset the invite link after any incident, since a reset permanently invalidates the previous URL.</li>
+<li><strong>Separate human access from admin rights.</strong> Per-user dashboard access lets a team moderate without each person holding native admin rights. The <a href="https://9bot.com.br/en/9bot-docs/">9bot documentation</a> describes how access per user, history and approval rules are configured.</li>
+<li><strong>Plan the role lifecycle.</strong> Granting, reviewing and revoking admin status should be a routine task, as covered in this guide on how to <a href="https://9bot.com.br/en/add-change-remove-whatsapp-group-admin/">add, change or remove a WhatsApp group admin</a>.</li>
+</ul>
+<p>Any bot or automation connected to the group runs with the permissions of its account, so that number needs the same protection as a human admin. Tools act after the takeover, not before it. The weak link remains the person persuaded to read a code aloud.</p>
+<p>Source: Ivan Schroll (2026), Account Takeover of WhatsApp Group Administrators: Verification-Code Hijacking, Linked Devices and Layered Mitigations. DOI 10.17605/OSF.IO/HZUN5</p>
+<p>Author: Ivan Schroll (ORCID 0009-0007-0680-5570)</p>
 </body>
 </html>

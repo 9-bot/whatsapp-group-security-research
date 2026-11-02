@@ -1,16 +1,91 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Golpes e links maliciosos em grupos de WhatsApp: notas técnicas</title>
-<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}</style>
+<title>Groups as an Attack Surface: A Control Matrix for Scam Links in WhatsApp Communities</title>
+<link rel="canonical" href="https://9bot.com.br/en/how-to-prevent-scams-in-whatsapp-groups/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>Golpes e links maliciosos em grupos de WhatsApp: notas técnicas</h1>
-<p>Em quase todas as cadeias de golpe descritas pelo FBI, pela Meta e pelo CERT.br, o link é o mecanismo que tira a vítima da conversa e a leva a um pagamento, a um formulário de credenciais ou a um app malicioso. Uma regra de moderação de links com lista de domínios permitidos remove automaticamente o que está fora dela. O paper aponta o limite com clareza: o filtro não julga um link de golpe hospedado em domínio permitido, nem um golpe sem link. Para grupos grandes, a <a href="https://9bot.com.br/pt/bot-para-grupo-whatsapp/">moderação assistida por bot</a> resolve a velocidade, não o julgamento.</p>
-<p>O paper classifica as contramedidas por quem pode aplicá-las: plataforma, membro, admin e ferramenta. Na camada do admin, o controle mais direto é a entrada. Com "Aprovar novos participantes" ativo, cada pedido feito pelo link espera revisão. Quando o volume cresce, é possível <a href="https://9bot.com.br/pt/como-adicionar-bot-no-grupo-do-whatsapp/">aprovar participantes com regras automáticas</a>, usando filtros, limite diário e histórico de aprovações. Isso desacelera a entrada de contas de golpe e cria um registro, mas, como o próprio estudo registra, não verifica a intenção de ninguém.</p>
-<p>Uma das tabelas do paper liga padrões de golpe a recursos documentados. Postagem repetida da mesma oferta pede anti-spam e anti-flood. Reincidentes pedem palavras proibidas, advertências e uma escada de punições, lembrando que listas de palavras podem ser dribladas com variações de grafia. Perguntas como "essa oferta é verdadeira?" podem receber um aviso padrão de segurança por resposta automática. Tudo isso só funciona dentro dos grupos onde a <a href="https://9bot.com.br/pt/">automação de grupos no WhatsApp</a> está instalada. A maior parte da cadeia continua no privado e em outras plataformas.</p>
-<p>Fonte: Ivan Schroll (2026), Scams and Malicious Links in WhatsApp Groups: Employment, Investment and Impersonation Fraud, Pix Payments in Brazil and Administrator-Level Controls. DOI 10.17605/OSF.IO/CYP2G.</p>
+<h1>Groups as an Attack Surface: A Control Matrix for Scam Links in WhatsApp Communities</h1>
+<h2>Why fraud teams should care about group chats</h2>
+<p>Security teams usually model fraud at the payment layer or the email gateway. Messaging groups sit outside both. A large WhatsApp group is a broadcast channel with no content filtering by default, a shared directory of every member's phone number and an implicit trust signal: if a message appears inside a group you joined, it borrows the group's credibility.</p>
+<p>Ivan Schroll's report reviews scam families that official sources associate with messaging groups and maps them to controls an administrator can actually operate. It covers employment and task scams, investment fraud, impersonation and fake offers, with attention to Pix payments in Brazil.</p>
+<p>The scale is not hypothetical. In August 2025 Meta reported banning more than 6.8 million accounts linked to scam centres in the first half of that year. The WhatsApp Help Center acknowledges that a scammer may message you, call you or add you to a group.</p>
+<h2>Cross-platform kill chain</h2>
+<p>The most instructive case described by Meta looks like a distributed workflow:</p>
+<ol>
+<li>Initial contact by SMS with a link to a WhatsApp conversation.</li>
+<li>Migration to Telegram.</li>
+<li>"Tasks" on TikTok to simulate paid work.</li>
+<li>A deposit request to a cryptocurrency account.</li>
+</ol>
+<p>Meta notes that scammers move victims across platforms so that no single service observes the full scheme. For a defender, that means no single log source contains the incident. The group admin sees only the entry point.</p>
+<p>The FBI's 2024 alert on task scams describes the same economics: confusing pay, a dashboard showing earnings that can never be withdrawn and, eventually, a demand for crypto payment to unlock more work.</p>
+<h2>Control matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Scam pattern</th>
+<th>Documented feature</th>
+<th>Capability and limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phishing, fake shop or task links</td>
+<td>Link moderation with an allow list and automatic removal</td>
+<td>Removes links outside the list; cannot judge a link that is allowed</td>
+</tr>
+<tr>
+<td>Repeated posting of one offer</td>
+<td>Anti-spam and anti-flood</td>
+<td>Caps volume; one well-crafted message may pass</td>
+</tr>
+<tr>
+<td>Recurring offenders</td>
+<td>Banned words, strikes, punishment ladder</td>
+<td>Consistent consequences; spelling variants evade word lists</td>
+</tr>
+<tr>
+<td>Scam accounts joining via shared link</td>
+<td>Member approval with filters, daily limits, history</td>
+<td>Slows entry and leaves a record; cannot verify intent</td>
+</tr>
+<tr>
+<td>Incident awareness</td>
+<td>Moderation history and community health analytics</td>
+<td>Shows what was done; blind to private chats between members</td>
+</tr>
+<tr>
+<td>"Is this offer real?" questions</td>
+<td>Automatic replies and custom commands</td>
+<td>Returns a standard safety notice; not fact-checking</td>
+</tr>
+</tbody>
+</table>
+<p>Read the right column carefully. Every control has a documented failure mode, and the paper does not oversell any of them.</p>
+<h2>Indicators to encode</h2>
+<ul>
+<li>Unexpected contact or being added without request.</li>
+<li>An offer that is too good.</li>
+<li>A request to pay before earning.</li>
+<li>Urgency.</li>
+<li>A link that moves the conversation somewhere else.</li>
+</ul>
+<p>These map well to rules: link policies catch the last item, approval filters reduce the second, and pinned notices handle the human side.</p>
+<h2>Engineering conclusion: default deny at the group boundary</h2>
+<p>The admin cannot inspect private chats or other platforms, so the design goal is to make the group a poor first hop.</p>
+<ul>
+<li><strong>Default deny for links.</strong> Maintain an allow list of domains the community actually needs and remove everything else automatically. The guide on how to <a href="https://9bot.com.br/en/filter-links-and-files-whatsapp-groups/">filter links and files in WhatsApp groups</a> walks through allow lists and file rules.</li>
+<li><strong>Gate entry.</strong> Require approval for join requests, with filters and daily limits, so a burst of fresh accounts cannot arrive through one leaked link.</li>
+<li><strong>Make enforcement deterministic.</strong> Strikes and a punishment ladder turn moderation into policy instead of mood. Operational shortcuts such as <a href="https://9bot.com.br/en/useful-whatsapp-admin-commands/">admin commands for WhatsApp groups</a> keep response time low.</li>
+<li><strong>Publish an invariant.</strong> State in the description that admins never ask for payment or codes in private. That is a cheap implementation of Meta's "pause, question, verify" advice.</li>
+<li><strong>Keep records.</strong> Moderation history is your only audit trail inside the group.</li>
+</ul>
+<p>None of this stops a determined fraudster who moves the victim into private chat. It does remove the group as an amplifier, which is the part an administrator controls.</p>
+<p>Source: Ivan Schroll (2026), Scams and Malicious Links in WhatsApp Groups: Employment, Investment and Impersonation Fraud, Pix Payments in Brazil and Administrator-Level Controls. DOI 10.17605/OSF.IO/CYP2G</p>
+<p>Author: Ivan Schroll (ORCID 0009-0007-0680-5570)</p>
 </body>
 </html>

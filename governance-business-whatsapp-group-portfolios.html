@@ -1,16 +1,96 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Governança de portfólios de grupos de WhatsApp em empresas: notas técnicas</title>
-<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}</style>
+<title>Shadow IT With Customers Inside: Identity Lifecycle Management for Business WhatsApp Group Portfolios</title>
+<link rel="canonical" href="https://9bot.com.br/en/what-happens-when-whatsapp-group-admin-leaves/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>Governança de portfólios de grupos de WhatsApp em empresas: notas técnicas</h1>
-<p>O risco central de um portfólio corporativo de grupos está numa frase da Central de Ajuda do WhatsApp: o criador do grupo não pode ser removido e continua admin enquanto não sair. Nenhuma ferramenta muda isso. O que uma camada de <a href="https://9bot.com.br/pt/">automação de grupos no WhatsApp</a> consegue fazer é tornar o portfólio visível e aplicar configurações iguais em muitos grupos, sempre com as permissões da conta conectada. O paper lista os limites: ela não remove criador, não enxerga grupos em que a conta não está e não recupera mensagens anteriores à conexão.</p>
-<p>Direitos de admin no WhatsApp não estão ligados a nenhum sistema de identidade corporativa. Quando alguém troca de função ou sai da empresa, nada o remove dos grupos que administra, a não ser alguém fazendo isso à mão, grupo por grupo. O paper propõe tratar cada atribuição de admin como acesso com dono, motivo, data de início e data de revisão. Entradas de membros seguem a mesma lógica: em vez de deixar a porta aberta, dá para <a href="https://9bot.com.br/pt/como-adicionar-bot-no-grupo-do-whatsapp/">aprovar participantes automaticamente</a> com filtros e manter registro do que foi decidido.</p>
-<p>Grupos comuns são conversas com criptografia de ponta a ponta guardadas nos aparelhos dos membros. A organização não tem arquivo no servidor nem log de ações de admin. A exportação gera um arquivo de texto que não volta para o app, e as mensagens temporárias reduzem o acúmulo sem garantir apagamento. Por isso o paper pede uma decisão escrita para cada classe de grupo: canal de registro ou canal efêmero. Logs das ações executadas por uma <a href="https://9bot.com.br/pt/bot-para-grupo-whatsapp/">moderação assistida por bot</a> ajudam, mas cobrem só o que a ferramenta fez.</p>
-<p>Fonte: Ivan Schroll (2026), Governance and Operational Security of Business WhatsApp Group Portfolios: Administrator Lifecycle, Employee Offboarding, Brand Impersonation and Recordkeeping. DOI 10.17605/OSF.IO/G6HF9.</p>
+<h1>Shadow IT With Customers Inside: Identity Lifecycle Management for Business WhatsApp Group Portfolios</h1>
+<h2>The asset that is missing from your IAM</h2>
+<p>On an employee's last day, offboarding runs like a pipeline: badge disabled, SSO account suspended, laptop collected, SaaS seats reclaimed. The WhatsApp groups that person created with customers, resellers and distributors are not in that pipeline, because they were never provisioned through it.</p>
+<p>Ivan Schroll's report calls this a portfolio problem. Sales, support and marketing each open groups informally. A few years later the company holds a set of customer-facing channels that nobody can list completely. Research on shadow IT explains the origin: Abbas and Alghail (2021) found staff using tools such as WhatsApp without IT approval, mainly because the organisation offered no suitable alternative.</p>
+<h2>Five risks, one root cause</h2>
+<ol>
+<li><strong>Ownership by creator.</strong> The Help Center states the creator cannot be removed and remains admin until they exit. If that account is a personal number, the company depends on the person to leave voluntarily, or must recreate the group from a company number and ask every customer to rejoin.</li>
+<li><strong>Privileges that outlive the role.</strong> Admin rights are not tied to HR records. Former staff, agencies after contract end and partners who changed jobs may still post as admin to the brand's customers.</li>
+<li><strong>Device and account sprawl.</strong> Shared accounts on linked devices with no attribution.</li>
+<li><strong>Brand impersonation.</strong> Customers cannot easily tell an official group from a copy.</li>
+<li><strong>No organisational record.</strong> Ordinary groups provide no organisation-wide log of admin actions.</li>
+</ol>
+<p>There is also a failure mode in the platform's succession logic: if the only admin leaves, WhatsApp picks another member at random, possibly a customer.</p>
+<h2>Architecture comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Ordinary group</th>
+<th>WhatsApp Business app group</th>
+<th>Cloud API Groups API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Maximum size</td>
+<td>1,024 members</td>
+<td>1,024 members</td>
+<td>8 participants</td>
+</tr>
+<tr>
+<td>Joining</td>
+<td>Added, or invite link</td>
+<td>Same</td>
+<td>Invite link only, optional approval</td>
+</tr>
+<tr>
+<td>Creator removable</td>
+<td>No</td>
+<td>No</td>
+<td>Group belongs to the business number</td>
+</tr>
+<tr>
+<td>Admin roles</td>
+<td>Unlimited</td>
+<td>Unlimited</td>
+<td>Managed through the API</td>
+</tr>
+<tr>
+<td>Staff on one account</td>
+<td>Up to 4 linked devices</td>
+<td>Up to 10 with multi-agent plans</td>
+<td>API integration</td>
+</tr>
+<tr>
+<td>Attribution of staff messages</td>
+<td>None documented</td>
+<td>Documented for chats, not groups</td>
+<td>Business's own systems</td>
+</tr>
+<tr>
+<td>Organisation-level record</td>
+<td>Manual export</td>
+<td>Manual export</td>
+<td>Through the integration</td>
+</tr>
+</tbody>
+</table>
+<p>No option gives you large customer groups and native organisational control at the same time. That trade-off is the core design decision.</p>
+<h2>Engineering conclusion: run joiner, mover, leaver on groups</h2>
+<p>The paper translates standard access governance into proposals, explicitly not tested standards.</p>
+<ul>
+<li><strong>Portfolio register.</strong> One entry per group or Community: purpose, business owner, creating account and whether it is company-controlled, admin accounts and the person behind each, membership type, settings, records rule and last review date.</li>
+<li><strong>Creation rule.</strong> New business groups only from company-controlled numbers, registered at creation.</li>
+<li><strong>Minimum admin set.</strong> At least two company-controlled admins per group, so the random-admin rule never fires. The mechanics are covered in <a href="https://9bot.com.br/en/what-happens-when-whatsapp-group-admin-leaves/">what happens when a WhatsApp group admin leaves</a>.</li>
+<li><strong>Joiner, mover, leaver.</strong> Grant admin rights on request with a reason, review on role change, revoke in every registered group on the same day as other access. Agency and partner rights end with the contract.</li>
+<li><strong>Hygiene.</strong> Two-step verification and app lock for every admin account, and periodic review of linked devices.</li>
+<li><strong>Customer safeguards.</strong> Admin-only messaging in announcement groups, and official numbers and payment methods stated in the description.</li>
+<li><strong>Records decision.</strong> Each class of group is either a channel of record, exported on schedule, or ephemeral, with disappearing messages and no commitments made there.</li>
+<li><strong>Annual reconciliation.</strong> Compare the register with the groups company accounts actually belong to.</li>
+</ul>
+<p>Automation can execute parts of this at scale, as described in <a href="https://9bot.com.br/en/whatsapp-group-automation-for-business/">WhatsApp group automation for business</a>, with one constraint: a tool acts with the permissions of the connected account and cannot remove a group's creator.</p>
+<p>Source: Ivan Schroll (2026), Governance and Operational Security of Business WhatsApp Group Portfolios: Administrator Lifecycle, Employee Offboarding, Brand Impersonation and Recordkeeping. DOI 10.17605/OSF.IO/G6HF9</p>
+<p>Author: Ivan Schroll (ORCID 0009-0007-0680-5570)</p>
 </body>
 </html>

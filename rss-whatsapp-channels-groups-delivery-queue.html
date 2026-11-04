@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piping RSS Into WhatsApp: Why Channels Stay Manual and Groups Become the Delivery Queue</title>
+<link rel="canonical" href="https://9bot.com.br/en/automate-whatsapp-channel-rss/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>Piping RSS Into WhatsApp: Why Channels Stay Manual and Groups Become the Delivery Queue</h1>
+<p>Every newsroom or content team that already ships an RSS feed eventually asks the same engineering question: can we wire that feed straight into a WhatsApp channel and stop copying links by hand? On paper it looks like a trivial integration. A feed is a well defined source, a channel is a broadcast sink, and the glue should be a small worker with a cron schedule. In practice the sink side is where the design falls apart, because the platform does not expose a write path for channels.</p>
+<p>That constraint shapes the whole architecture. Instead of one pipeline that ends in the channel, you end up with two delivery targets with very different properties, and a human approval step between them.</p>
+<h2>What the platform exposes today</h2>
+<p>The <a href="https://9bot.com.br/en/automate-whatsapp-channel-rss/">9bot write-up on channel automation and its real limits</a> documents a check of Meta's developer documentation made on October 9, 2026. The findings, restated as an interface inventory:</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>Direction</th>
+<th>Usable for auto-posting to a channel?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WhatsApp Business Platform (Cloud API)</td>
+<td>Business to customer messaging, templates, webhooks, groups</td>
+<td>No channel publishing feature found</td>
+</tr>
+<tr>
+<td>Meta Content Library API</td>
+<td>Read-only channel and update data for research</td>
+<td>No, it does not publish</td>
+</tr>
+<tr>
+<td>WhatsApp app itself</td>
+<td>Manual posting by owner and admins</td>
+<td>No built-in RSS reader or feed import</td>
+</tr>
+</tbody>
+</table>
+<p>Some third-party vendors advertise channel posting "via API". From a security review standpoint, that claim deserves the same scrutiny you would give any integration asking for a session token. These services generally run on a session connected to the number that owns the channel, and the Help Center says that connecting an account to unofficial apps or sites may get it banned. When a vendor claims an official channels API, request the matching page in Meta's developer docs. The 9bot check did not find one.</p>
+<h2>Two sinks, two threat models</h2>
+<p>A channel and a group behave like two different message buses. A channel is a one-way broadcast: followers cannot reply or message admins, notifications are muted by default, updates stay visible to visitors for 30 days, and up to 16 admins can be invited by the owner. A group is bidirectional, notifications are on by default, members can see each other, and it can be locked so that only admins send messages.</p>
+<p><a href="https://9bot.com.br/en/automate-whatsapp-channel-rss/"><img alt="Your marketing team shouldn't be posting one message at a time" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-marketing-team-shouldnt-be-posting-one-message-at-a-time-EN.gif" /></a></p>
+<p>For an engineer, that split suggests a staging and production pattern:</p>
+<ul>
+<li><strong>Staging queue</strong>: a private team group receives every new feed item automatically, with headline, summary and link.</li>
+<li><strong>Promotion step</strong>: a channel admin forwards the strongest 3 to 5 stories of the day to the channel. Forwarding to your own channel is a supported feature, including several messages at once.</li>
+<li><strong>Production sink</strong>: the channel, which only ever receives curated items.</li>
+<li><strong>Alternative production sink</strong>: an admins-only news group that receives the feed directly, for readers who want the full stream in real time.</li>
+</ul>
+<p>Two side effects are worth logging in your runbook. Forwarded messages carry a Forwarded label, and everything that lands in the channel is public. If the label is a problem, posting the link directly with its preview takes less than a minute.</p>
+<h2>Configuring the feed worker</h2>
+<p>In the 9bot dashboard the RSS integration sits under Integrations, on the RSS and news card. The configuration surface is small: paste the feed URL and click Verify Feed, pick how posts are scheduled (a fixed interval, the 06:00 and 18:00 defaults, or your own times), define the interval in minutes and the maximum number of items per send, then save. The cap per send works as a simple rate limit, so tune it before a busy news day. The <a href="https://9bot.com.br/en/how-to-set-up-rss-feed-whatsapp/">step by step guide to setting up an RSS feed on WhatsApp</a> covers the same flow from the publisher side.</p>
+<h2>Engineering conclusion: access control decides the design</h2>
+<p>The reason this pattern holds up is not convenience, it is access control. The channel is the asset with the largest public surface, so the safest design keeps automated writers away from it entirely and leaves the final publish action with named human admins. The automated worker only writes into a group where admins already control who can send. That gives you a clear boundary: machines fill the queue, people promote to production.</p>
+<p>Treat channel admin seats like privileged accounts. Keep the list short, review it when staff change roles, and do not hand the number that owns the channel to a service that needs a live session to operate. 9bot is an independent paid tool with a 7-day trial and is not affiliated with Meta or WhatsApp. The architecture above works with the features the platform documents today, and that is the only foundation worth building on.</p>
+</body>
+</html>

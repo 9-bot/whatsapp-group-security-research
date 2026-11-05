@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoping the WhatsApp Groups API: OBA Gating, Eight-Seat Rooms and the Missing Moderation Layer</title>
+<link rel="canonical" href="https://9bot.com.br/en/whatsapp-groups-api/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>Scoping the WhatsApp Groups API: OBA Gating, Eight-Seat Rooms and the Missing Moderation Layer</h1>
+<p>Most requests that reach a platform team about WhatsApp groups start from one assumption: surely there is an endpoint for this. Since Meta added a Groups API to the Cloud API, that is partly right. The work is figuring out which part, because the API serves a narrow use case and its boundaries come from identity and authorization rules, not throughput. Below it gets the usual dependency review: who may call it, what it controls, what it refuses to do.</p>
+<h2>Identity gating comes before any code</h2>
+<p>The first control is not technical. The Groups API only runs on Cloud API numbers that hold an Official Business Account (OBA). The <a href="https://9bot.com.br/en/whatsapp-groups-api/">9bot breakdown of the Groups API, its limits and its alternatives</a> lists the criteria Meta publishes for that status: following the WhatsApp Business Messaging Policy, a minimum of 30 days registered on the WhatsApp Business Platform, a business portfolio verified by Meta, two-step verification switched on for the number, and an approved display name. Employee numbers, test accounts and WhatsApp Business app numbers are not eligible, and a rejected request forces a 30 day wait before the next attempt.</p>
+<p>As a security control this is sensible: every API group is tied to a verified business with 2FA on the sending number. For planning it is a blocker, since a team without OBA cannot even start a proof of concept.</p>
+<h2>The object model in one table</h2>
+<p>Limits as recorded from Meta's documentation on October 9, 2026:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Constraint</th>
+<th>Design implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Participants per group</td>
+<td>8 maximum</td>
+<td>Service rooms, not communities</td>
+</tr>
+<tr>
+<td>Groups per number</td>
+<td>Up to 10,000</td>
+<td>One group per ticket or account is feasible</td>
+</tr>
+<tr>
+<td>Cloud API businesses per group</td>
+<td>1 maximum</td>
+<td>A single integrator owns the room</td>
+</tr>
+<tr>
+<td>Membership</td>
+<td>Invite link only, join requests optional</td>
+<td>No direct add, the user always opts in</td>
+</tr>
+<tr>
+<td>Message types</td>
+<td>Text, media, text or media templates</td>
+<td>No buttons, lists, commerce or auth messages</td>
+</tr>
+<tr>
+<td>Billing</td>
+<td>Per message</td>
+<td>Busy groups raise the bill</td>
+</tr>
+<tr>
+<td>Unsupported</td>
+<td>Calls, disappearing and view-once messages, edit, delete, hiding the participant list</td>
+<td>No moderation primitives</td>
+</tr>
+</tbody>
+</table>
+<p>The lifecycle is predictable: create the group with a subject and description, fetch or reset its invite link, deliver it (a template can carry it), handle join requests if enabled, then message, pin and consume webhook events. Teardown removes participants, changes settings or deletes the group. All of it assumes a Cloud API integration, a webhook receiver and someone on call.</p>
+<h2>Two layers, two permission models</h2>
+<p>The source article separates two layers, and the split belongs in your architecture diagram. The Meta layer (Cloud API plus Groups API) carries business messaging, pushes events to your server and enforces the limits above. The group operation layer covers routine work in large groups and communities tied to a number you control: join approvals, moderation, command replies and scheduled announcements.</p>
+<p><a href="https://9bot.com.br/en/whatsapp-groups-api/"><img alt="Your WhatsApp groups are a business channel" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-WhatsApp-groups-are-a-business-channel-EN.gif" /></a></p>
+<p>The Groups API cannot serve that second layer: without delete, no process can pull a banned link or an abusive message. This is where 9bot works. 9bot is an independent paid tool with a 7-day trial, has no affiliation with Meta and does not use the Cloud API. It connects to a number that admins the groups through the linked devices feature, using a QR code or pairing code, and enforces rules there: anti link, strikes, removal, commands. When a command has to reach your back office, the pattern is a GET, POST or PUT call, covered in the guide to <a href="https://9bot.com.br/en/whatsapp-webhook-group-commands-crm-erp/">routing WhatsApp group commands into a CRM or ERP</a>.</p>
+<h2>Operational risks for the runbook</h2>
+<ul>
+<li><strong>Session lifetime</strong>: a primary phone accepts up to four linked devices, which are logged out once the phone sits unused for more than 14 days. Alert on that.</li>
+<li><strong>Account policy</strong>: per the Help Center, tying a number to unofficial software risks a ban, and WhatsApp does not allow automated or bulk messaging. Scope automation to organizing groups, never to blasting.</li>
+<li><strong>Cost exposure</strong>: per message pricing turns a chatty service group into a variable cost line.</li>
+</ul>
+<h2>Engineering conclusion: authorization picks the layer</h2>
+<p>Choose the layer by the privilege the workload needs. For a short lived service conversation between one business and a handful of people, the Groups API offers a verified identity, opt in membership and auditable webhook events. If you must delete content or remove members in groups of hundreds, the privilege required is group admin, and the API never grants it. The admin number then becomes a privileged account: 2FA on, a short list of people allowed to scan the pairing QR code, and periodic review of linked sessions. Three checks settle it: headcount above eight, OBA plus developers, a moderation requirement. Fail any and the work moves to the operation layer.</p>
+</body>
+</html>

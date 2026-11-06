@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two WhatsApp MCP Servers, Two Trust Boundaries: What Meta&#x27;s Beta Server Covers and What It Leaves Out</title>
+<link rel="canonical" href="https://9bot.com.br/en/whatsapp-mcp-meta-vs-9bot/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>Two WhatsApp MCP Servers, Two Trust Boundaries: What Meta&#x27;s Beta Server Covers and What It Leaves Out</h1>
+<p>Once an AI assistant can call tools, the first review question is simple: which system does it touch, and with whose permissions? For WhatsApp there are now two MCP servers on the table, and they sit on opposite sides of that question. Treating them as interchangeable is the mistake to avoid.</p>
+<h2>Layer one: platform provisioning</h2>
+<p>Meta's WhatsApp Business Tools MCP runs remotely, is still in beta and is protected by Meta OAuth. Its tools handle the plumbing of a Business Platform account: finding the business account, registering and verifying phone numbers, managing message templates, sending messages and configuring webhooks. Sending is limited to plain text within the 24 hour window, or approved templates.</p>
+<p>Meta positions it for development and testing workflows, not for production sending at scale. Its documentation does not list tools for groups or communities. If your threat model includes group admin actions, this server is simply out of scope, which is a fine property for a provisioning tool.</p>
+<h2>Layer two: daily group operations</h2>
+<p>The <a href="https://9bot.com.br/en/whatsapp-mcp-meta-vs-9bot/">comparison of Meta's MCP and the 9bot MCP server</a> covers the other layer. The 9bot server runs at <code>mcp.9bot.com.br/mcp</code> and acts on groups and communities of a WhatsApp number you own, linked as a device through a pairing code or a QR scan. The published toolsets and their sizes:</p>
+<table>
+<thead>
+<tr>
+<th>Toolset</th>
+<th>Tools</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Automations</td>
+<td>62</td>
+</tr>
+<tr>
+<td>Workflows</td>
+<td>40</td>
+</tr>
+<tr>
+<td>Groups</td>
+<td>29</td>
+</tr>
+<tr>
+<td>Integrations</td>
+<td>27</td>
+</tr>
+<tr>
+<td>Reports, Community</td>
+<td>17 each</td>
+</tr>
+<tr>
+<td>Moderation</td>
+<td>16</td>
+</tr>
+<tr>
+<td>Messages</td>
+<td>15</td>
+</tr>
+<tr>
+<td>Schedules</td>
+<td>13</td>
+</tr>
+<tr>
+<td>Jobs</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>A new application starts with Groups, Reports and Workflows enabled. Everything else is opt in, which is the right default for an agent that can write to real conversations.</p>
+<p><a href="https://9bot.com.br/en/whatsapp-mcp-meta-vs-9bot/"><img alt="Your marketing team shouldn't be posting one message at a time" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-marketing-team-shouldnt-be-posting-one-message-at-a-time-EN.gif" /></a></p>
+<h2>The controls worth auditing</h2>
+<p>A larger tool surface only makes sense if the access model is tight. These are the controls the 9bot documentation describes:</p>
+<ul>
+<li><strong>OAuth 2.1 with scopes</strong>, so each client receives only the permissions someone approved.</li>
+<li><strong>Group level scoping</strong>: the application sees authorized groups and nothing else.</li>
+<li><strong>Allowlists and denylists</strong> per tool, plus read only applications for reporting use.</li>
+<li><strong>Preview and single use confirmation</strong> before sensitive operations run.</li>
+<li><strong>Data policy</strong>: sensitive fields can be blocked, masked or allowed.</li>
+<li><strong>Audit trail</strong> with the complete action history.</li>
+</ul>
+<p>For a security review, the useful question is what happens when the model is wrong. Read only applications cap the blast radius for analytics. Confirmation steps put a human between a prompt and a mass removal. The audit log lets you reconstruct who asked for what.</p>
+<h2>Mapping tasks to servers</h2>
+<p>Use Meta's server when an engineer is standing up a test number, drafting a template or checking that a webhook reaches the right endpoint during implementation. Use the 9bot server when the task belongs to someone running communities: a manager asking an assistant to summarize engagement for each customer group each week, or a marketing team asking for a workflow that sends a reminder on Fridays. Operations teams can also connect group commands to a CRM, a pattern described in the guide to <a href="https://9bot.com.br/en/whatsapp-webhook-group-commands-crm-erp/">WhatsApp webhooks for CRM and ERP</a>.</p>
+<p>The two can run side by side. A company may keep one to one customer service on Meta's platform and put the community layer on the 9bot server, each with its own credentials and its own number type: a Cloud API number on one side, your own number linked as a device on the other.</p>
+<h2>Disclosure and limits</h2>
+<p>9bot is an independent product. It has no official status and no partnership with Meta. It is a paid service with a 7-day trial, and the MCP server is part of the plan rather than a separate purchase. Any client that speaks remote MCP with OAuth can connect, for example ChatGPT, Claude or Gemini.</p>
+<p>Two cautions for the runbook. First, WhatsApp rules do not allow automated bulk messaging, so scope agents to organizing and reporting, not to blasting. Second, tying a number to unofficial software carries account risk, so treat the linked number as a privileged identity: restrict who can scan the pairing code and review linked sessions on a schedule.</p>
+<h2>Takeaway</h2>
+<p>Do not ask which server is better. Ask which layer the agent will touch. Meta's beta server configures the messaging infrastructure of a business account. The 9bot server operates groups and communities under scoped, confirmed and logged access. Pick by the privilege the task needs, then grant the smallest scope that gets it done.</p>
+</body>
+</html>

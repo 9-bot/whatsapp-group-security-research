@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Least Privilege for Group Agents: Scoping an AI Agent That Operates WhatsApp Communities</title>
+<link rel="canonical" href="https://9bot.com.br/en/whatsapp-ai-agents-community-management/">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>Least Privilege for Group Agents: Scoping an AI Agent That Operates WhatsApp Communities</h1>
+<p>Connecting a language model to a messaging account changes the security question. A chat assistant that only produces text can be wrong without consequences outside the conversation. An agent wired to tools can read member lists, schedule announcements and remove people. In a business that runs dozens of customer or partner groups, that is a privileged automation identity, and it deserves the same design review you would give a service account with write access to production.</p>
+<p>This note looks at how 9bot exposes WhatsApp group operations to AI agents and which controls an engineering or security team should verify before turning anything on.</p>
+<h2>Where the agent sits in the stack</h2>
+<p>In 9bot the agent does not talk to WhatsApp directly. It reaches group operations through an MCP server protected by OAuth, and each MCP application is issued only the groups, scopes and tools the company has approved. Any client that supports remote MCP plus the required authentication flow can connect. The vendor guides name ChatGPT, Claude, Gemini, LM Studio and Microsoft Copilot.</p>
+<p>The WhatsApp side is a number the company already owns, linked with a pairing code or a QR scan. 9bot does not supply numbers and is not Meta's official API. It is an independent, paid product with a 7-day trial, and MCP access is part of the plan rather than an add-on.</p>
+<p>Two scope boundaries are worth stating early in a design doc. First, this is group and community operations, not one to one customer support tied to a CRM. Second, WhatsApp is the only destination platform: Telegram and Discord are out of scope, and so is any form of bulk messaging to people who did not opt in.</p>
+<h2>Risk tiers by operation</h2>
+<p>The published toolsets map cleanly onto a tiered permission model. A practical way to read it:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Typical prompt</th>
+<th>Risk tier</th>
+<th>Control to require</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Query groups and members</td>
+<td>"Which groups lost activity?"</td>
+<td>Low</td>
+<td>Read only application</td>
+</tr>
+<tr>
+<td>Build reports</td>
+<td>"Weekly engagement summary"</td>
+<td>Low</td>
+<td>Reports scope</td>
+</tr>
+<tr>
+<td>Workflows and schedules</td>
+<td>"Reminder every Friday, 6 PM"</td>
+<td>Medium</td>
+<td>Human review in the dashboard</td>
+</tr>
+<tr>
+<td>Send messages</td>
+<td>"Post this news to selected groups"</td>
+<td>Medium</td>
+<td>Authorized group list plus confirmation</td>
+</tr>
+<tr>
+<td>Assisted moderation</td>
+<td>"Warn this member"</td>
+<td>High</td>
+<td>Sensitive action confirmation, audit</td>
+</tr>
+<tr>
+<td>Remove members</td>
+<td>"Drop anyone idle for 60 days"</td>
+<td>High</td>
+<td>Preview, one time token, audit</td>
+</tr>
+</tbody>
+</table>
+<p>The design principle behind the table: reads can be granted broadly, while anything that mutates a group or speaks to members passes through an explicit human gate.</p>
+<h2>Controls to verify in a review</h2>
+<ul>
+<li><strong>Group scoping.</strong> Groups outside the application's allowlist never show up in query results. Test this with a group you deliberately leave out.</li>
+<li><strong>Tool scoping.</strong> Applications can be read only or full access, and each one can carry its own allowlist and denylist of tools.</li>
+<li><strong>Data policy.</strong> Sensitive fields can be blocked, masked or allowed according to company rules.</li>
+<li><strong>Confirmation flow.</strong> A sensitive request produces a preview of the expected effect. Execution only proceeds after a temporary, single use confirmation is submitted again.</li>
+<li><strong>Audit.</strong> The validated action runs and its result is logged for administrators.</li>
+</ul>
+<p>That confirmation step is what stops a vague instruction from turning into a mass removal or a message landing in the wrong group. The model proposes; a person approves.</p>
+<h2>Measuring whether it works</h2>
+<p>Once the agent runs real tasks, treat its output like any other service metric. Compare equivalent periods over the same set of groups, keep task definitions stable, and log human hours, completed executions and interventions. Separate successful runs from failures and from operations stuck waiting for confirmation, and note every decision that needed a person.</p>
+<p><a href="https://9bot.com.br/en/whatsapp-ai-agents-community-management/"><img alt="Reports that show the return on your communities" src="https://9bot.com.br/wp-content/uploads/2026/10/Reports-that-show-the-return-on-your-communities-EN.gif" /></a></p>
+<p>Resist crediting the agent with every engagement shift. Campaigns, rule changes and group membership move the numbers too. Pair the agent's logs with group health signals such as activity, joins, exits and moderation actions in the same window.</p>
+<p>The vendor's write-up on <a href="https://9bot.com.br/en/whatsapp-ai-agents-community-management/">what AI agents can safely do in WhatsApp groups</a> covers these tiers and the confirmation sequence in more detail, and connection steps for each client live on the <a href="https://9bot.com.br/en/mcp/">9bot MCP server page</a>.</p>
+<h2>Engineering conclusion</h2>
+<p>Treat access control as the product, not a setting. A sensible rollout begins with one read only application bound to a short list of groups, used for queries and reports until the team trusts the outputs. Write scopes come later, attached to named owners, with confirmation required on every sensitive tool and the audit trail reviewed on a schedule. If a task cannot be expressed as a narrow scope plus a human checkpoint, it is not ready to delegate to an agent. Least privilege, explicit gates and a readable log are what turn an AI agent from a liability into a dependable operator for group infrastructure.</p>
+</body>
+</html>

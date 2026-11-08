@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outbound-Only by Design: Wiring WhatsApp Group Commands to a CRM or ERP Without Opening an Inbound Port</title>
+<link rel="canonical" href="https://9bot.com.br/en/whatsapp-webhook-group-commands-crm-erp/">
+<link rel="icon" type="image/png" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<link rel="apple-touch-icon" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<meta property="og:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-outbound-only-by-design-wiring-whatsapp-group-commands-to-a-crm-or-erp-without-o.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-outbound-only-by-design-wiring-whatsapp-group-commands-to-a-crm-or-erp-without-o.png">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>Outbound-Only by Design: Wiring WhatsApp Group Commands to a CRM or ERP Without Opening an Inbound Port</h1>
+<p>Most integration diagrams that involve WhatsApp start with a public HTTPS route on your side. The Meta Cloud API model works that way: you register a callback, and message events arrive whenever the account receives traffic. Your team then owns a listener, a signature check, a retry story and a queue. The 9bot approach for groups runs in the opposite direction, and for many B2B teams that changes the threat model more than it changes the code.</p>
+<p>Here a person in a group types a trigger such as <code>/order 1234</code>, and 9bot issues an HTTP request to an endpoint you control. Nothing is pushed into 9bot from outside. There is no receiving URL on the 9bot side for your CRM, your ERP or anything else to call. Everything flows from the conversation outward to your systems.</p>
+<h2>The two directions side by side</h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Meta Cloud API callback</th>
+<th>9bot group command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Who opens the connection</td>
+<td>Meta, toward your server</td>
+<td>9bot, toward your endpoint</td>
+</tr>
+<tr>
+<td>What fires it</td>
+<td>Message events on the account</td>
+<td>A member sending a configured trigger in a group</td>
+</tr>
+<tr>
+<td>Verbs</td>
+<td>POST only</td>
+<td>GET, POST or PUT</td>
+</tr>
+<tr>
+<td>Listener you must host</td>
+<td>Yes, registered with Meta</td>
+<td>No listener in 9bot; your API is the target</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td>Account traffic</td>
+<td>Group operations</td>
+</tr>
+</tbody>
+</table>
+<p>For a security reviewer, the listener row matters most. You are not exposing a webhook receiver for a third party to hit. You are publishing a narrow API route that accepts calls from one integration, which you can rate limit, authenticate and log like any other machine client.</p>
+<h2>How a command maps to a request</h2>
+<p>Setup lives in the dashboard under Commands. An admin creates a new command, picks a trigger that begins with a period, an exclamation mark or a slash, sets the response type to API, and supplies the address plus the verb. The convention is simple: GET for lookups, POST for creating records, PUT for changing an existing one.</p>
+<p>Typical mappings a sales or operations group might use:</p>
+<ul>
+<li><code>/quote</code> sends a POST that opens a lead in the CRM with the customer's request text.</li>
+<li><code>/order 1234</code> performs a GET against an ERP or ecommerce backend to return status.</li>
+<li><code>/stock product</code> checks availability with a GET.</li>
+<li><code>/update 1234</code> moves an opportunity to its next stage through PUT.</li>
+<li><code>/ticket</code> opens a help desk case via POST.</li>
+<li><code>/report</code> can POST to an n8n or Make scenario, which then fans data out to other tools.</li>
+</ul>
+<p><a href="https://9bot.com.br/en/whatsapp-webhook-group-commands-crm-erp/"><img alt="Your WhatsApp groups are a business channel" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-WhatsApp-groups-are-a-business-channel-EN.gif" /></a></p>
+<p>When n8n or Make sits in the middle, remember whose URL that is. The inbound address belongs to the automation platform, not to 9bot. The command calls it, and the scenario takes over from there. For flows with several steps, the same integration action is available inside a 9bot workflow, and the <a href="https://9bot.com.br/en/custom-commands-whatsapp-group-engagement/">custom commands walkthrough</a> shows the creation screen if you want to see the fields before planning routes.</p>
+<p>A payload for a lead creation could carry the command name, the group label and the text the member typed. The field list is a contract you define.</p>
+<h2>What this does not do</h2>
+<p>Be explicit about the boundaries in your design document. This flow does not receive callbacks from a CRM, does not sync one-to-one conversations, and is not a two-way integration. Compatibility with a given CRM depends entirely on whether it, or a middleware layer, exposes an endpoint that accepts the configured verb, authentication and fields.</p>
+<p>It is also worth stating in procurement notes that 9bot is an independent, paid product with a 7-day trial and is not Meta's official API. You link a number your company already owns.</p>
+<h2>Engineering conclusion on access control</h2>
+<p>Because the integration is outbound only, the controls you care about sit in two places. On the 9bot side, restrict who may fire sensitive triggers to admins and to the groups that actually need them. On your side, the endpoint should be dedicated to this integration, reachable only over TLS, and backed by a service identity with the minimum CRM or ERP permissions required for that one operation.</p>
+<p>Treat every inbound string as hostile input: validate length and format before it touches a query. Make writes idempotent so a repeated command does not create two leads, and keep an audit trail in your own system next to the dashboard execution logs. Keep credentials in configuration, never inside command text or group messages, and decide in advance which fields are fit to echo back into a shared room.</p>
+<p>The full breakdown of directions, verbs and recommended practices is in the article on <a href="https://9bot.com.br/en/whatsapp-webhook-group-commands-crm-erp/">connecting WhatsApp group commands to a CRM, ERP or API</a>. Start with a single read-only GET in a controlled group, confirm the logs on both ends match, and only then grant write verbs.</p>
+</body>
+</html>

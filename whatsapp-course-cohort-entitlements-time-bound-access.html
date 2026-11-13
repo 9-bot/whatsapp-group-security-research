@@ -3,10 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Course Cohorts on WhatsApp as Infrastructure: Entitlements, Time-Bound Access and Group Sharding</title>
+<title>Reconciling checkout state with WhatsApp cohort membership: entitlements, expiry and shards</title>
 <link rel="canonical" href="https://9bot.com.br/en/whatsapp-automation-course-creators/">
 <link rel="icon" type="image/png" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
 <link rel="apple-touch-icon" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<meta name="description" content="A paid cohort on WhatsApp looks like a chat.">
+<meta property="og:title" content="Reconciling checkout state with WhatsApp cohort membership: entitlements, expiry and shards">
+<meta property="og:description" content="A paid cohort on WhatsApp looks like a chat.">
 <meta property="og:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-course-cohorts-on-whatsapp-as-infrastructure-entitlements-time-bound-access-and-.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
@@ -16,107 +19,53 @@
 <style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}img{max-width:100%}</style>
 </head>
 <body>
-<h1>Course Cohorts on WhatsApp as Infrastructure: Entitlements, Time-Bound Access and Group Sharding</h1>
-<p>A course creator with one cohort runs a group. A course creator with six cohorts, a launch funnel and a renewal community runs a distributed system whose state lives in a chat app: who paid, whose access ended, which notice went out, who answered the logistics question late at night. The content team usually notices last, when a buyer who never got into the group asks for a refund, or when someone whose access ended weeks ago is still reading every live class link.</p>
-<p>Below, the 9bot guide to <a href="https://9bot.com.br/en/whatsapp-automation-course-creators/">WhatsApp automation for course creators</a> is treated as a systems design exercise: where membership state is decided, how it expires, and how you prove that every group in a cohort still runs the same rules.</p>
-<h2>Membership is an entitlement, not a chat</h2>
-<p>The useful mental model is entitlement management. A purchase creates an entitlement with a start and an end. Group membership should be a projection of that entitlement, never an independent fact that admins edit by hand. When the two drift apart you get one of two failures: a paying student locked out, or a former student with standing access to paid material and to the phone numbers of everyone else in the room.</p>
-<p>The second failure is a privacy issue as much as a revenue one. Ivan Schroll's review of access control in large groups (DOI 10.17605/OSF.IO/WFDQ3) observes that every participant in a group can see the phone numbers of the rest, and it ranks entry filters, daily caps, time limited access and pruning of inactive members as the main levers an operator holds at group level. In a paid community, each of those levers maps to a line in the entitlement model.</p>
-<h2>Lifecycle stages and their controls</h2>
+<h1>Reconciling checkout state with WhatsApp cohort membership: entitlements, expiry and shards</h1>
+<p>A paid cohort on WhatsApp looks like a chat. Underneath, it is a consistency problem. The checkout (or the LMS) already knows who may study until which date. The group only becomes trustworthy when membership is a projection of that record, not a list that someone edits when they have a spare minute.</p>
+<p>This note is an engineering reading of that problem. It stays on three testable invariants. Product behaviour and the supporting workflow sit <a href="https://9bot.com.br/en/whatsapp-automation-course-creators/">in 9bot's course-creator automation article</a>. 9bot sells a paid subscription; you can evaluate it for seven days. It is not a Meta product and WhatsApp has not endorsed it.</p>
+<p><a href="https://9bot.com.br/en/whatsapp-automation-course-creators/"><img alt="Your WhatsApp groups are a business channel" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-WhatsApp-groups-are-a-business-channel-EN.gif" /></a></p>
+<h2>Three invariants worth writing down</h2>
+<p><strong>I1. Every non-exception member can be traced to a live entitlement.</strong> If the person did not buy, did not renew, or already passed the end date, they should not remain in the room. Exceptions exist (company admins, a short allowlist), and they should be listed, not implied.</p>
+<p><strong>I2. Every shard of the same cohort carries the same controls.</strong> Ordinary WhatsApp groups accept at most 1,024 participants, a ceiling taken from the Help Center and confirmed on 28 Oct 2026. A larger intake is therefore several rooms, not a bigger room. Those rooms must share admission, welcome, commands, posting windows and the access clock. A single room set up in a hurry becomes the place where a scam link survives.</p>
+<p><strong>I3. Expiry is a job you can inspect, not a memory.</strong> Removal that depends on someone remembering the last day will fail on a busy week. The job needs a period, a prior notice, a defined exception list and a way to see that it ran.</p>
+<p>If I1 drifts, a former buyer keeps seeing live-class links and everyone else's phone number. If I2 drifts, the cohort is no longer one product. If I3 drifts, both failures appear with a delay that looks like "the system is fine" until a complaint arrives.</p>
+<h2>Entitlement as the source of truth</h2>
+<p>Treat a purchase as a record with at least four fields: who, which offer, when access starts, when it ends. Membership in a shard is derived state. Refunds, chargebacks, complimentary extensions and transfers between intakes all mutate the record first. Only then should the group change.</p>
+<p>Two clocks get confused in practice. "Access lasts 12 months from purchase" is not the same as "access lasts until 31 December." A pause granted by support is a change to the end date, not a silent skip of the removal job. Write the rule the way the offer was sold, then configure the same rule in the panel.</p>
+<p>9bot's timed access control is the execution side of I3: after the period you set, the member is removed, a notice can go out beforehand, and admins plus numbers on the exception list are skipped. The panel repeats the expiry check on a five-minute cycle. That is frequent enough for a course operation, provided the period in the panel still matches the offer.</p>
+<h2>Shards and blast radius</h2>
+<p>Splitting a cohort is a capacity decision and a blast-radius decision. Five rooms for a 5,000-buyer intake means five copies of the same controls. The useful question is not only "how many rooms do we need" (buyers divided by 1,024, rounded up). It is "what happens if room 4 was configured by hand."</p>
+<p>Keep a cohort definition you can diff: the list of rooms, the access period, the welcome version, the command set, the posting calendar, the exception list, and which company number holds admin rights in every room. 9bot does not import that file. It is your manifest, used to review the panel. A WhatsApp Community, with one announcement space, can carry broadcasts while discussion stays inside each shard. Broadcasts still inherit the same risk: if the wrong people are still in a shard, they receive the announcement too.</p>
+<h2>What the bot should never decide alone</h2>
+<p>Billing disputes, identity checks and exceptions belong to a person, in a private channel, not in the cohort. Custom commands such as <code>.classes</code> or <code>.certificate</code> can absorb logistics questions. If a command needs data from software you run, 9bot is able to fire an outbound HTTP GET, POST or PUT toward your checkout, the platform that hosts the lessons, or an orchestrator (n8n and Make are typical). Authenticate that endpoint, keep lookups on read-only routes, and do not print personal data back into a shared room.</p>
+<p>Give the bot a company line that is an admin in every shard, kept apart from the handset the creator uses every day. Leave a second company admin in each room as well. A room that loses its last admin is no longer under the business.</p>
+<h2>Proving the invariants</h2>
+<p>Use the same report pack on every shard: people who interacted in the period, people who went silent for seven days, joins, exits, and net change, which 9bot can export as a PDF. Add two operational checks that the report will not invent for you: does every shard still have two company admins, and does the exception list still match the written policy.</p>
 <table>
 <thead>
 <tr>
-<th>Stage</th>
-<th>Group type</th>
-<th>Manual operation</th>
-<th>Automated control</th>
+<th>Invariant</th>
+<th>Fast check</th>
+<th>Typical repair</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Lead capture</td>
-<td>Launch group, admins post only</td>
-<td>Someone posts each notice by hand at the planned hour</td>
-<td>Scheduled messages, antispam, link filter</td>
+<td>I1</td>
+<td>Sample members against the checkout end date</td>
+<td>Remove or extend, then fix the period</td>
 </tr>
 <tr>
-<td>Purchase</td>
-<td>Cohort group</td>
-<td>Admin compares a buyer list with join requests</td>
-<td>Approval rules with filters and a daily cap</td>
+<td>I2</td>
+<td>Compare admission, welcome, commands and filters across shards</td>
+<td>Re-apply the standard setup</td>
 </tr>
 <tr>
-<td>First week</td>
-<td>Cohort group</td>
-<td>Rules retyped for every newcomer</td>
-<td>Standard welcome carrying the group rules</td>
-</tr>
-<tr>
-<td>Course</td>
-<td>Cohort group</td>
-<td>Staff retype the same logistics answer</td>
-<td>Commands like .classes or .certificate</td>
-</tr>
-<tr>
-<td>Access ends</td>
-<td>Cohort group</td>
-<td>Removals happen when someone remembers</td>
-<td>Time based removal with prior notice and exceptions</td>
-</tr>
-<tr>
-<td>Renewal</td>
-<td>Paid community</td>
-<td>Reminders sent from a personal phone</td>
-<td>Time based access plus recurring reminders</td>
+<td>I3</td>
+<td>Confirm last expiry cycle and the notice that precedes it</td>
+<td>Correct the period and the exception list</td>
 </tr>
 </tbody>
 </table>
-<p>Each row is a service that needs a named owner and fails in its own way. Only one row, access ends, destroys state. That is the row to design most carefully.</p>
-<h2>Sharding: the 1,024 ceiling</h2>
-<p>The participant cap of a WhatsApp group is 1,024. Any cohort above that becomes a set of shards, and the shard count is a ceiling division: students divided by 1,024, rounded up. A launch with 5,000 buyers needs five groups; 25,000 needs twenty five. The guide recommends grouping the shards under one WhatsApp Community whose announcement group carries broadcasts, so broadcast traffic flows through one channel while discussion stays inside each shard.</p>
-<p>Sharding multiplies configuration. Every shard needs the same approval rule, the same welcome, the same commands and the same access period. If shard 4 was set up by hand on a busy evening and its link filter is off, shard 4 is where the next scam link lands. Drift between shards is the quiet failure mode of a growing course business.</p>
-<p><a href="https://9bot.com.br/en/whatsapp-automation-course-creators/"><img alt="Your WhatsApp groups are a business channel" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-WhatsApp-groups-are-a-business-channel-EN.gif" /></a></p>
-<h2>A cohort manifest</h2>
-<p>Keep the cohort definition as configuration you can diff and review. This YAML lives in your own repository and is not an import format for 9bot. Every key corresponds to a control from the guide or to a role from its team model.</p>
-<pre><code class="language-yaml">cohort: &quot;&lt;course name&gt; / &lt;cohort id&gt;&quot;
-entitlement:
-  source_of_truth: &quot;&lt;checkout or LMS&gt;&quot;
-  access_days: &quot;&lt;n&gt;&quot;
-  notice_before_removal: &quot;&lt;n days&gt;&quot;
-  exceptions: [admins, whitelist]
-shards:
-  max_participants: 1024
-  community_announcements: true
-  groups: [&quot;&lt;shard 1&gt;&quot;, &quot;&lt;shard 2&gt;&quot;]
-operations_number: &quot;&lt;dedicated number, admin in every shard&gt;&quot;
-company_admins_per_shard: 2
-template:
-  admission: { approval: filtered, daily_cap: &quot;&lt;n&gt;&quot; }
-  welcome: rules_v1
-  moderation: { antispam: on, link_filter: on, banned_words: &quot;&lt;list ref&gt;&quot;, strikes: on }
-  commands:
-    - { trigger: &quot;.classes&quot;, response: text }
-    - { trigger: &quot;.certificate&quot;, response: text }
-  schedules: [&quot;&lt;live class reminder&gt;&quot;, &quot;&lt;cart opening notice&gt;&quot;]
-reporting:
-  per_shard: [active_members, inactive_7d, joins, exits, net_growth]
-  export: pdf
-</code></pre>
-<p>Two fields carry most of the security weight. <code>operations_number</code> separates the operational identity from the creator's personal phone, and it has to be an admin of every shard so the bot can enforce the rules. <code>company_admins_per_shard: 2</code> matters because, as the governance review registered under DOI 10.17605/OSF.IO/G6HF9 explains, a group left without admins gets a randomly chosen member promoted in their place.</p>
-<h2>Time based removal is a scheduled job</h2>
-<p>In 9bot, time based access control removes a member when the configured period ends, sends a notice beforehand and skips admins and whitelisted numbers; the dashboard checks for expired access every 5 minutes. In engineering terms that is a reconciliation loop with a known period. Treat it like any job that deletes state:</p>
-<ol>
-<li>Confirm the access period in the panel matches the offer that was sold.</li>
-<li>Keep the whitelist short and reviewed, because it bypasses the removal rule.</li>
-<li>Make monitors and support staff admins or whitelisted before a cohort closes.</li>
-<li>Watch exits that happen before access ends; the guide treats them as an early warning about content quality or posting cadence.</li>
-</ol>
-<p>When a command needs data from your own systems, 9bot can issue an outgoing GET, POST or PUT request to a CRM, an LMS, or an orchestrator like n8n or Make. The direction matters: the call goes out to an endpoint you authenticate and validate, so no inbound port opens for the bot. Point lookups at read only routes and never echo personal data back into a shared group.</p>
-<h2>Roles and the blast radius of an admin account</h2>
-<p>The guide splits the team into creator, community manager, teaching assistants, support and the bot. Billing and access problems go to support through a private channel, so payment details never reach the cohort. The community manager owns configuration across all shards, so that panel login and the operations number are high value targets. The takeover analysis registered as DOI 10.17605/OSF.IO/HZUN5 explains why: whoever steals one verification code inherits all the groups that account runs. Requiring two step verification for each admin login, plus a periodic review of linked devices, is the baseline.</p>
-<h2>Health checks per cohort</h2>
-<p>Make the operating promise measurable. For each shard, track active members, members inactive for the last 7 days, joins, exits and net growth, which 9bot reports per group with PDF export. Definitions sit in the <a href="https://9bot.com.br/en/whatsapp-metrics-glossary/">WhatsApp metrics glossary</a>, and the retention protocol for a <a href="https://9bot.com.br/en/whatsapp-student-community-retention/">student community on WhatsApp</a> covers what to do after week one. A failed check, such as a shard without a second admin or a schedule that did not fire, is an incident with an owner.</p>
-<h2>Conclusion</h2>
-<p>Running many cohorts on WhatsApp is entitlement management with a 1,024 seat shard size: one manifest, one template applied to every shard, a removal job you trust and roles scoped to what each person needs. <a href="https://9bot.com.br/en/">9bot</a> covers that execution layer as a paid, independent product with a 7 day trial, unaffiliated with Meta.</p>
+<p>A failed check is an incident with an owner, not a note in a chat. The work of configuring 9bot is only useful if these three statements stay true after the next launch.</p>
 </body>
 </html>

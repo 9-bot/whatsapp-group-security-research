@@ -3,10 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Usage Policy as a Control Plane: Roles, Offboarding and Ban-Risk Signals for Corporate WhatsApp Groups</title>
+<title>Making a corporate WhatsApp usage policy executable: controls, evidence and review</title>
 <link rel="canonical" href="https://9bot.com.br/en/corporate-whatsapp-usage-policy/">
 <link rel="icon" type="image/png" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
 <link rel="apple-touch-icon" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<meta name="description" content="A usage policy that lives only as a PDF is a rule nobody deployed.">
+<meta property="og:title" content="Making a corporate WhatsApp usage policy executable: controls, evidence and review">
+<meta property="og:description" content="A usage policy that lives only as a PDF is a rule nobody deployed.">
 <meta property="og:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-the-usage-policy-as-a-control-plane-roles-offboarding-and-ban-risk-signals-for-c.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
@@ -16,110 +19,21 @@
 <style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>The Usage Policy as a Control Plane: Roles, Offboarding and Ban-Risk Signals for Corporate WhatsApp Groups</h1>
-<p>A company that runs customer, partner and staff conversations inside WhatsApp groups usually has a policy gap before it has a tooling gap. Nobody wrote down who may open a group on the company's behalf, which payloads may circulate, how member phone numbers are handled, or what happens to admin rights on an employee's last day. Without that spec, each group is configured by whoever created it, and the number that gets banned or leaks a member list is the one nobody was watching.</p>
-<p>This note reads the 9bot guide on <a href="https://9bot.com.br/en/corporate-whatsapp-usage-policy/">building a corporate WhatsApp usage policy</a> as an engineering document. The guide splits the policy into five domains: roles, content and timing, personal data, moderation controls and offboarding. Each domain can be mapped to a control you configure, monitor and review on a schedule.</p>
-<h2>Why the platform alone does not give you governance</h2>
-<p>Start with the primitives. Ivan Schroll's governance paper (DOI 10.17605/OSF.IO/G6HF9) compares the group architectures a business can choose. Ordinary groups and Business app groups hold up to 1,024 members with unlimited admin roles, but the creator cannot be removed and there is no organisation level record of admin actions. The Cloud API Groups API binds the group to the business number, yet caps it at 8 participants. None of the options combines large customer groups with native organisational control.</p>
-<p>That gap is where a governance layer belongs. It does not replace the platform. It runs on an account the company already controls and enforces, on every message, what the policy document only describes.</p>
-<h2>Surfaces the policy has to cover</h2>
-<table>
-<thead>
-<tr>
-<th>Surface</th>
-<th>Improvised operation</th>
-<th>Policy enforced through 9bot</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Admission</td>
-<td>Whoever holds the invite link walks in</td>
-<td>Automatic member approval and time based access</td>
-</tr>
-<tr>
-<td>Payloads</td>
-<td>Links reviewed whenever an admin happens to look</td>
-<td>Forbidden Links filter backed by a domain whitelist</td>
-</tr>
-<tr>
-<td>Volume</td>
-<td>Repeated posts tolerated until someone complains</td>
-<td>Antispam and antiflood</td>
-</tr>
-<tr>
-<td>Abuse</td>
-<td>Admin judges in private, one case at a time</td>
-<td>Banned words plus a warning ladder ending in removal</td>
-</tr>
-<tr>
-<td>Evidence</td>
-<td>Screenshots in a personal gallery</td>
-<td>Moderation logs, deletion logs and PDF reports</td>
-</tr>
-<tr>
-<td>Identity lifecycle</td>
-<td>Former staff keep admin rights indefinitely</td>
-<td>Same day revocation and two company admins per group</td>
-</tr>
-</tbody>
-</table>
-<p>Two rows deserve emphasis. Identity lifecycle is the one engineers underestimate. Admin rights are attached to phone accounts rather than to your directory, so they survive HR events unless a person revokes them by hand. The governance paper adds a sharper edge: when the last admin exits, WhatsApp promotes a random member, who may well be a customer. Keeping two company controlled admins in every group removes that path entirely.</p>
-<p>Evidence is the other one. After an incident, compliance will ask what was removed, when and under which rule. The guide points to the Moderation area, the deletion logs and the Moderation tab inside Reports, which breaks down, for a chosen period, the spam and links that were blocked plus the warnings and punishments issued. That is a record you can hand to an auditor instead of a reconstruction from memory.</p>
-<h2>Ban risk is an availability problem</h2>
-<p>Treat a banned operations number as an outage with no failover. The guide is careful on this point. The WhatsApp Terms forbid unsolicited bulk messaging, bans tend to correlate with complaints from users and with unusual patterns of automated sending, and no tool can promise immunity. What a policy can do is reduce the signals that trigger reports:</p>
-<ul>
-<li>deliver only to people who joined the group by choice;</li>
-<li>cap frequency and keep company posts inside defined windows;</li>
-<li>delete suspicious links before members escalate them;</li>
-<li>operate from a dedicated number, kept apart from employees' personal phones.</li>
-</ul>
+<h1>Making a corporate WhatsApp usage policy executable: controls, evidence and review</h1>
+<p>A usage policy that lives only as a PDF is a rule nobody deployed. The document can name roles, posting hours, a link policy and an offboarding duty, and the rooms can still be configured by whoever opened them. This note treats the policy as something that has to compile: each clause should point to a control, a place where evidence lands, and a review date.</p>
+<p>The clauses themselves, and a template you can copy, are <a href="https://9bot.com.br/en/corporate-whatsapp-usage-policy/">on the official 9bot page about a corporate WhatsApp usage policy</a>. 9bot is commercial software. A seven-day evaluation comes with the paid plan. The company is not a Meta affiliate and has not been endorsed by WhatsApp. The official guide is not legal advice; have counsel review your final wording.</p>
 <p><a href="https://9bot.com.br/en/corporate-whatsapp-usage-policy/"><img alt="Your WhatsApp groups are a business channel" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-WhatsApp-groups-are-a-business-channel-EN.gif" /></a></p>
-<p>Each of those lines can become an indicator tracked per number. Company posts per group per day, links removed per week and joins approved through filters are values you can chart the way you chart error rates for a service. When one number drifts, you know which group to inspect before a member reaches for the report button.</p>
-<h2>Rules as Configuration</h2>
-<p>Policy text and enforcement should move through the same review cycle. Writing the controls as a versioned file lets legal approve the exact artifact that operators deploy, and turns every policy change into a diff. The structure below is a reference for your own repository, not a 9bot import format. Every key corresponds to a control the guide names, and the bracketed values are yours to fill.</p>
-<pre><code class="language-yaml">policy_id: corp-wa-usage
-scope: every_group_created_or_managed_for_the_company
-roles:
-  owner: department_manager
-  administrators:
-    min_company_accounts: 2
-    numbers: company_controlled_only
-  moderators: support_team
-  reviewer: legal_or_dpo
-  enforcement_agent: 9bot_on_company_number
-admission:
-  member_approval: automatic_with_filters
-  time_based_access: enabled
-content:
-  links:
-    default: deny
-    allow_domains: [&quot;&lt;company domain&gt;&quot;, &quot;&lt;approved partner domain&gt;&quot;]
-  antispam: true
-  antiflood: true
-  banned_words_list: &quot;&lt;list reference&gt;&quot;
-  third_party_promotion: deny
-schedule:
-  company_post_window: &quot;&lt;start&gt;-&lt;end&gt;&quot;
-  days: &quot;&lt;days&gt;&quot;
-enforcement:
-  ladder: [notice, notice, final_notice, removal]   # 9bot default, adjustable
-offboarding:
-  revoke_admin_role: same_day
-data:
-  export_approval: &quot;&lt;team&gt;&quot;
-  export_location: &quot;&lt;location&gt;&quot;
-  retention_after_exit: &quot;&lt;period set by legal&gt;&quot;
-review_every: &quot;&lt;period&gt;&quot;
-</code></pre>
-<h2>Least privilege for operators and the bot</h2>
-<p>The principle you apply to service accounts applies here too. A moderation tool acts with the permissions of the connected account, and the governance paper notes it cannot remove a group's creator, so scope it to the company number and to the groups in your register. Exceptions to the link filter should be explicit entries in the config, visible in review, rather than habits nobody can audit.</p>
-<p>Admin accounts are privileged identities. The paper on admin account takeover (DOI 10.17605/OSF.IO/HZUN5) describes how a single shared verification code hands an attacker every group that person administers. The paper on scams (DOI 10.17605/OSF.IO/CYP2G) shows why that matters commercially: a hijacked admin can post a Pix payment request to the whole customer base with the group's credibility attached. Two step verification on every admin account belongs in the policy, not in a wiki.</p>
-<h2>Data handling belongs in the same file</h2>
-<p>The data protection paper (DOI 10.17605/OSF.IO/ZG9U7) argues that a business group falls under the LGPD and the GDPR even when it runs on an employee's phone, and that members seeing each other's numbers is a structural property of groups. The usage policy turns this into four questions the config must answer: the purpose of each group, who is allowed to pull a member list or chat export and where it is stored, how fast data about people who left is deleted, and how a member requests removal. For collection limits, see <a href="https://9bot.com.br/en/whatsapp-group-data-collection-privacy-compliance/">what a group admin can legally collect</a>.</p>
-<h2>Operating it as a service</h2>
-<p>Once the policy is configuration, run it like infrastructure. A weekly health check can confirm that every registered group still has two company admins, that the link filter is active and that the last review date is inside its interval. Policy changes can be rehearsed in a test group before rollout, so a new banned word or domain rule never surprises a live customer group.</p>
-<h2>Conclusion</h2>
-<p>A usage policy that lives only in a PDF behaves like a firewall rule nobody deployed. Bind each clause to a control, version the configuration, make offboarding a same day event and keep the logs. <a href="https://9bot.com.br/en/">9bot</a> is the execution layer for that model: an independent, paid product with a 7-day trial, with no affiliation to Meta. The guide states that it is not legal advice, so have your legal team validate the final wording.</p>
+<h2>Compile each domain, or admit that it is theatre</h2>
+<p>The guide groups the policy into five domains. An executable version asks one extra question in each.</p>
+<p><strong>Roles.</strong> The document should name duties (owner, administrator, moderator, reviewer), not people. The compiled form is a register of rooms plus two company-controlled admins in every room, one of them the operations number the bot uses. If a room was opened from a personal phone, record the hard limit discussed in the portfolio review DOI 10.17605/OSF.IO/G6HF9: whoever opened a standard group in the first place cannot be pushed out. Plan a successor room rather than a removal you cannot perform.</p>
+<p><strong>Content and hours.</strong> Purpose in the description, posting windows, approved domains, banned language, no unauthorised promotion. The compiled form is a link filter with a domain allowlist, banned words, antispam and antiflood, and scheduled posting so that company messages do not leak into the night. A clause without a matching switch will be enforced only when someone is looking.</p>
+<p><strong>Personal data.</strong> Phone number, display name and photo are personal data under rules such as the LGPD and the GDPR. The compiled form answers four operational questions: the purpose of the room, who is allowed to extract a roster or a transcript, and where that export is stored, how quickly you discard records of people who already exited, and how someone requests erasure or departure. "We do not export" is an answer. "Anyone with a phone can forward a list" is also an answer, just not one compliance will like.</p>
+<p><strong>Moderation.</strong> The compiled form is the warning ladder and the logs. 9bot ships a default ladder (observed in the dashboard on 28 Oct 2026): a couple of notices, a last warning, then a removal. Each company can reshape those steps. Evidence lives in the Moderation area, in the deletion log itself, and in the reporting view for moderation, which summarises spam and URLs that were stopped, plus warnings and sanctions in the period you choose.</p>
+<p><strong>Offboarding.</strong> The compiled form is a same-day job: on the last calendar day you drop that person's admin role and their panel login, you make sure two company admins are still present, and you review linked devices on company numbers. Admin rights ride on phone accounts, so they outlive an HR ticket unless a person revokes them.</p>
+<h2>Evidence is part of the build</h2>
+<p>After an incident, someone will want a reconstruction: which item was taken down, at what time, and by what clause. A folder of screenshots in a personal gallery is not an answer you can hand over. Design the policy so that the logs you already have are the answer, and say in the document which screen is authoritative. If a control does not leave a record, either accept that gap in writing or do not claim the control exists.</p>
+<h2>Review is a cycle, not a launch</h2>
+<p>A policy change is a change to a live room. Rehearse a new banned word or a new domain rule in a test group before you roll it out to customers. Put a review interval in the document and a team that owns it. A weekly look can confirm that the inventory still shows two company-controlled admins in each room, that the allowlist for links is active, and that the stated review interval has not already lapsed.</p>
+<p>This is narrower than a full security programme. Two-step verification on admin accounts still matters, for reasons the takeover review DOI 10.17605/OSF.IO/HZUN5 makes clear, and it belongs in the identity process. The executable policy only claims what the rooms themselves can apply and what the logs can show. 9bot is the execution layer for those controls. The register, the review calendar and the offboarding checklist stay with the company.</p>
 </body>
 </html>

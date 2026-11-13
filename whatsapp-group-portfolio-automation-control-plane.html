@@ -3,10 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Automating a WhatsApp Group Portfolio: Templates, Delegated Permissions and SLA Health Checks</title>
+<title>Templates, delegated access and health checks: a control plane for a WhatsApp group portfolio</title>
 <link rel="canonical" href="https://9bot.com.br/en/whatsapp-group-automation-for-business/">
 <link rel="icon" type="image/png" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
 <link rel="apple-touch-icon" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<meta name="description" content="WhatsApp rooms inside a company tend to accumulate rather than arrive as a designed set.">
+<meta property="og:title" content="Templates, delegated access and health checks: a control plane for a WhatsApp group portfolio">
+<meta property="og:description" content="WhatsApp rooms inside a company tend to accumulate rather than arrive as a designed set.">
 <meta property="og:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-automating-a-whatsapp-group-portfolio-templates-delegated-permissions-and-sla-he.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
@@ -16,107 +19,62 @@
 <style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}</style>
 </head>
 <body>
-<h1>Automating a WhatsApp Group Portfolio: Templates, Delegated Permissions and SLA Health Checks</h1>
-<p>Most companies never decide to run a portfolio of WhatsApp groups. They accumulate one. A sales lead opens a distributor group, support opens one per key account, marketing builds a customer community, and eventually an agency inherits the whole set under a monthly contract. At that point the useful question is no longer which bot to install. It is how to apply one rule set to dozens of groups without granting more access than each task needs.</p>
-<p>This note reads the 9bot guide to <a href="https://9bot.com.br/en/whatsapp-group-automation-for-business/">WhatsApp group automation for business</a> as a systems design problem: what runs where, under which identity, and how you prove it is still running.</p>
-<h2>The platform sets the boundary</h2>
-<p>Ivan Schroll's portfolio governance review (DOI 10.17605/OSF.IO/G6HF9) lays out the primitives. An ordinary group, including one opened from the Business app, holds up to 1,024 members, and its creator cannot be removed by anyone else. The Cloud API Groups API lets a business number own up to 10,000 groups, but each one is capped at 8 participants and people can join only through an invite link. Large customer and reseller communities therefore stay in ordinary groups, where the organisation has no native log of admin actions.</p>
-<p>The same review is explicit about third party management tools. They operate with the permissions of the connected account. They cannot remove a group creator, have no visibility into groups that account never joined, and cannot bring back messages sent before the connection existed. They also become a supplier in the data processing chain, which calls for a contract and an entry in the processing record. Those limits define the trust boundary of any automation design.</p>
-<h2>Task to control mapping</h2>
+<h1>Templates, delegated access and health checks: a control plane for a WhatsApp group portfolio</h1>
+<p>WhatsApp rooms inside a company tend to accumulate rather than arrive as a designed set. A distributors' channel here, a key-account support room there, a customer community opened for a campaign, and later an agency asked to run the lot. The job then shifts. You are no longer installing a helper in a single group. You are applying one rule set across many rooms, with no person holding more power than the task requires.</p>
+<p>This note describes that work as a small control plane: reusable templates, delegated permissions, and health checks you can repeat. The product side of the same problem is <a href="https://9bot.com.br/en/whatsapp-group-automation-for-business/">the 9bot article on automating business groups</a>. 9bot is a commercial tool, and Meta has not certified it. A paid plan is required; the trial period is seven days.</p>
+<p><a href="https://9bot.com.br/en/whatsapp-group-automation-for-business/"><img alt="Your marketing team shouldn't be posting one message at a time" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-marketing-team-shouldnt-be-posting-one-message-at-a-time-EN.gif" /></a></p>
+<h2>What belongs in the plane, and what does not</h2>
+<p>The plane holds three objects.</p>
+<p><strong>A register of rooms.</strong> Each row needs a purpose, a business owner, the company numbers that hold admin rights, and whether the room was opened from a company line. Ivan Schroll's portfolio review (DOI 10.17605/OSF.IO/G6HF9) is clear about a hard limit of the app itself: the person who created an ordinary group cannot be removed by anyone else. Rooms opened on a personal phone therefore sit outside full company control. Record that fact instead of discovering it on someone's last day.</p>
+<p><strong>A template.</strong> Admission, welcome, link policy, banned words, commands, and the notice calendar should be defined once and applied to every room of the same type. Drift is the quiet failure: forty rooms follow the standard, and the forty-first, set up late on a Friday, is where the next unwanted link survives.</p>
+<p><strong>A permission set.</strong> The agency analyst who schedules notices should not share a password with the person who can change admission rules. Per-user access in the 9bot panel exists so that delegation is a login, not a forwarded credential.</p>
+<p>The plane does not hold teaching content, sales copy, or the legal policy itself. It holds the switches that make a written rule true in the room.</p>
+<h2>Delegation without a shared login</h2>
+<p>Name three duties and give each a ceiling.</p>
 <table>
 <thead>
 <tr>
-<th>Repeated task</th>
-<th>Manual operation</th>
-<th>Automated control in 9bot</th>
+<th>Duty</th>
+<th>May change</th>
+<th>May not change</th>
+<th>Typical holder</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Entry</td>
-<td>Someone clears the request queue between other jobs</td>
-<td>Approval rules with filters and a cap per day</td>
+<td>Operate</td>
+<td>Schedules, command text, reports</td>
+<td>Admission policy, admin list, who the bot is connected as</td>
+<td>Community analyst or agency operator</td>
 </tr>
 <tr>
-<td>First message</td>
-<td>Each admin improvises a greeting</td>
-<td>One standard welcome per group</td>
+<td>Configure</td>
+<td>Templates, admission, link policy, warning ladder</td>
+<td>Which company number is connected</td>
+<td>Community lead</td>
 </tr>
 <tr>
-<td>Unwanted links</td>
-<td>Deleted if an admin happens to be online</td>
-<td>Link filter, banned words, strike counter</td>
-</tr>
-<tr>
-<td>Recurring questions</td>
-<td>Staff retype the same answer</td>
-<td>Custom commands like .menu</td>
-</tr>
-<tr>
-<td>Announcements</td>
-<td>Sent late or forgotten</td>
-<td>Recurring schedules across groups</td>
-</tr>
-<tr>
-<td>Client reporting</td>
-<td>Screenshots pasted into slides</td>
-<td>Metrics exported to PDF</td>
+<td>Own</td>
+<td>Open or close a room, appoint company admins, end a vendor's admin rights</td>
+<td>Day-to-day replies</td>
+<td>Department manager</td>
 </tr>
 </tbody>
 </table>
-<p>Read the table as a list of services, each with an owner and a failure mode. If the link filter is off in one group, that group is exposed even when forty others are fine. This is why the guide pushes reusable templates: configuration drift between groups is the quiet way a portfolio degrades.</p>
-<h2>Integrations go outbound only</h2>
-<p>When a group needs to reach another system, 9bot relies on commands that issue an outgoing HTTP request with GET, POST or PUT to your CRM, your ERP or an automation platform such as n8n or Make. The <a href="https://9bot.com.br/en/whatsapp-webhook-group-commands-crm-erp/">command to CRM integration guide</a> states that 9bot exposes no URL for receiving webhooks. In network terms, you open no inbound port for the bot. Your endpoint authenticates the call, validates input and decides what a command may read or change.</p>
-<p>Design each command with least privilege. A lookup should hit a read only route, a command that creates a record should be idempotent on the destination side, and nothing sensitive should be echoed back into a shared conversation. Credentials live in configuration, never in command text that members can see.</p>
-<p><a href="https://9bot.com.br/en/whatsapp-group-automation-for-business/"><img alt="Your marketing team shouldn't be posting one message at a time" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-marketing-team-shouldnt-be-posting-one-message-at-a-time-EN.gif" /></a></p>
-<h2>A portfolio manifest</h2>
-<p>Treat the portfolio as configuration you can diff. The layout below is meant for a repository you control; 9bot does not import it. Each field maps either to a control named in the guide or to the register proposed in the governance review.</p>
-<pre><code class="language-yaml">portfolio: &quot;&lt;client or business unit&gt;&quot;
-groups:
-  - id: &quot;&lt;group name&gt;&quot;
-    purpose: reseller_orders
-    created_by_company_number: true
-    company_admins: [&quot;&lt;ops number A&gt;&quot;, &quot;&lt;ops number B&gt;&quot;]   # at least two
-    template: b2b_default
-    agency_admin_until: &quot;&lt;contract end date&gt;&quot;
-templates:
-  b2b_default:
-    admission: { approval: filtered, daily_cap: &quot;&lt;n&gt;&quot; }
-    welcome: standard_v1
-    links: { mode: allowlist, domains: [&quot;&lt;company domain&gt;&quot;] }
-    moderation: { banned_words: &quot;&lt;list ref&gt;&quot;, strikes: enabled }
-    commands:
-      - trigger: &quot;.menu&quot;
-        response: text
-      - trigger: &quot;/order&quot;
-        response: api
-        method: GET
-        endpoint: &quot;&lt;read-only order status route&gt;&quot;
-    schedules: [&quot;&lt;recurring notice ref&gt;&quot;]
-reporting:
-  monthly_pdf: [active_members, inactive_7d, joins, exits, net_growth, peak_hours]
-service_level:
-  coverage_hours: &quot;&lt;window&gt;&quot;
-  human_reply_target: &quot;&lt;time&gt;&quot;
-  banned_content_removal_target: &quot;&lt;time&gt;&quot;
-  campaign_approver: &quot;&lt;role&gt;&quot;
-</code></pre>
-<p>The <code>agency_admin_until</code> field encodes a point from the governance review: when an agency or partner contract ends, its admin rights should end with it. Two company admins per group close the path where WhatsApp picks a random member as admin after the last one leaves.</p>
-<h2>SLAs are health checks</h2>
-<p>The guide separates what automation covers from what the contract covers. Rules run continuously, while the service level defines coverage hours, the time to answer questions a bot cannot resolve, the time to take down banned content and who signs off on campaigns. Engineers will recognise the pattern. Turn each clause into a probe:</p>
-<ol>
-<li>Every group in the manifest still lists two company admins.</li>
-<li>The link filter and strike counter are active in each group.</li>
-<li>Scheduled notices fired in the last cycle without errors.</li>
-<li>Command calls to the CRM or ERP show success in the dashboard logs.</li>
-<li>The monthly PDF for each client was generated on time.</li>
-</ol>
-<p>A failed probe is an incident with an owner, exactly like an expired certificate.</p>
-<h2>Identity and devices</h2>
-<p>Admin rights live on phone accounts, and the review notes that one account can link up to four companion devices. Every linked device is a place from which admin actions can be taken, so the device list belongs in the same periodic review as the admin list. The account takeover paper (DOI 10.17605/OSF.IO/HZUN5) explains the stakes: a single stolen verification code gives an attacker control of all groups that account runs. Two step verification on admin accounts is a baseline.</p>
-<h2>Evaluating vendors</h2>
-<p>When you compare group managers, ask questions that map to risk. Can moderation act with no admin online? Is there one panel with templates? Does each operator get individual access rather than a shared password? Can schedules recur across groups? Which metrics leave as PDF? Can a command call your systems? How is pricing structured? Does the vendor present itself as a Meta product? Third party tools are not Meta software, and a trial with a real group should come before any contract.</p>
-<h2>Conclusion</h2>
-<p>Automation at portfolio scale is mostly access design: one manifest, minimal permissions per command, outbound integrations and service levels expressed as checks. <a href="https://9bot.com.br/en/">9bot</a> fills that execution role as a paid, independent product, testable for 7 days and unaffiliated with Meta.</p>
+<p>When a contract with an agency ends, the "own" duty includes removing that agency's admin rights on the same day, just as you would for a departing employee. Two company-controlled admins should remain in every room so the app is never left to promote someone at random.</p>
+<p>If a group command has to talk to a CRM or an ERP, keep that call on a tight leash. 9bot can place an outbound request (GET, POST or PUT) against a system you control, or against an orchestrator such as n8n or Make. A status lookup should hit a read-only route. Do not echo private fields into a shared room. Keep tokens in configuration, never inside a command body that members can read.</p>
+<h2>Health checks that mean something</h2>
+<p>A portfolio is healthy when a short list of probes still passes, not when someone remembers that it "usually works." Useful probes:</p>
+<ul>
+<li>Every registered room still lists two company admins, and the connected operations number is one of them.</li>
+<li>The template expected for that room type is still in force: link filter, banned words, admission cap, welcome version.</li>
+<li>Scheduled notices for the last cycle fired without error.</li>
+<li>Outbound command calls, if you use them, show success in the logs rather than a week of silent failures.</li>
+<li>The monthly PDF for each client or business unit was produced: who participated, who stayed silent seven days, entries, exits, net movement, and the busiest hours.</li>
+</ul>
+<p>Each failed probe should be treated as an incident, with a named owner. The monthly pack is what an agency already owes a client; the other probes are how you notice a broken room before the client does.</p>
+<h2>Why this is narrower than a full governance programme</h2>
+<p>Account takeover, linked devices and two-step verification still matter, and they belong in the company's identity process. The control plane only asks whether the rooms you claim to run are still configured as promised, and whether the people you delegated work to can do that work without holding every key. If you cannot answer those two questions from a register plus the panel, you do not yet have a plane. You have a collection of groups and a shared password.</p>
+<p>9bot supplies the execution layer for templates, moderation, schedules, reports and outbound commands. The register, the duty table and the probe list stay yours.</p>
 </body>
 </html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retention as a pipeline: milestone events, a silence signal and an expiry notice for WhatsApp cohorts</title>
+<link rel="canonical" href="https://9bot.com.br/en/whatsapp-student-community-retention/">
+<link rel="icon" type="image/png" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<link rel="apple-touch-icon" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<meta name="description" content="Most course businesses treat the cohort group as a place where people talk. For retention work it is more useful to model it as a pipeline with inputs, sch">
+<meta property="og:title" content="Retention as a pipeline: milestone events, a silence signal and an expiry notice for WhatsApp cohorts">
+<meta property="og:description" content="Most course businesses treat the cohort group as a place where people talk. For retention work it is more useful to model it as a pipeline with inputs, sch">
+<meta property="og:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-retention-as-a-pipeline-milestone-events-a-silence-signal-and-an-expiry-notice-f.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-retention-as-a-pipeline-milestone-events-a-silence-signal-and-an-expiry-notice-f.png">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}img{max-width:100%}</style>
+</head>
+<body>
+<h1>Retention as a pipeline: milestone events, a silence signal and an expiry notice for WhatsApp cohorts</h1>
+<p>Most course businesses treat the cohort group as a place where people talk. For retention work it is more useful to model it as a pipeline with inputs, scheduled emitters, a detector and a terminal step. Once you draw it that way, the questions stop being "how do we keep people engaged" and become "which event fires, who owns the alert, and what does a failure look like".</p>
+<p>This note is the engineering reading. The product walkthrough, with the milestone table and the four step inactivity routine, lives in <a href="https://9bot.com.br/en/whatsapp-student-community-retention/">9bot's article on student community retention</a>. 9bot is sold as a subscription, with seven days to evaluate before paying. It is an independent product, not something built, certified or endorsed by Meta or WhatsApp.</p>
+<h2>What the evidence supports, and what it does not</h2>
+<p>The article leans on one peer reviewed source: a 2024 paper in Frontiers in Education that surveyed 309 final year students in WhatsApp groups run by their institution. Reciprocity, information quality and service quality were associated with satisfaction, and satisfaction was the strongest correlate of intention to continue. Note the boundary. The study measured intention. It did not measure who finished. For a system designer that means the pipeline below is a hypothesis to test per course, not a guaranteed lift.</p>
+<h2>The pipeline, stage by stage</h2>
+<pre><code> entry ──&gt; welcome ──&gt; milestone emitters ──&gt; silence detector ──&gt; human follow-up
+   │                        (scheduled)          (weekly, 7 days)        (tutor)
+   │                                                                        │
+   └──────────────── access window (start / notice / end) ◄─────────────────┘
+</code></pre>
+<p><strong>Input: entry.</strong> A join request is the first event. In 9bot, approval can be paired with an automatic welcome that tells the student where to begin and where questions go. Cohorts that start on a fixed calendar can use recurring schedules; cohorts with rolling enrolment can start a workflow at the moment a member enters, so each student gets a clock of their own.</p>
+<p><strong>Emitters: milestones.</strong> Each milestone is a scheduled message that asks for one small action and invites people who finished to post the result. The posting step is what feeds reciprocity, the variable the study tied to satisfaction. The source example sends the milestone reminder at 19:00, a reasonable default for working adults in a paid course.</p>
+<p><strong>Detector: silence.</strong> 9bot Reports list members with no message in the last seven days, per cohort group. That list is the only automated signal in the loop, and it is deliberately coarse. A student can be silent and still progressing on the course platform, so the list must be crossed with platform progress before anyone acts.</p>
+<p><strong>Human step: follow-up.</strong> One to one contact stays with the tutor. 9bot handles what happens in the group (messages, commands, moderation, reports, timed access) and does not message inactive students privately. Keeping that boundary explicit is good design: the bot never pretends to be the tutor.</p>
+<p><strong>Terminal: access window.</strong> With Time based Access Control, a warning can precede the removal. The notice opens room for an extension or a renewal offer, which is also the last retention lever before the student leaves the group for good.</p>
+<p><a href="https://9bot.com.br/en/whatsapp-student-community-retention/"><img alt="Cohort reports from 9bot, linking to the retention article" src="https://9bot.com.br/wp-content/uploads/2026/10/Reports-that-show-the-return-on-your-communities-EN.gif" /></a></p>
+<h2>Manual operation versus configured pipeline</h2>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Run by hand</th>
+<th>Run as configuration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entry</td>
+<td>Admin approves when they remember, welcome typed each time</td>
+<td>Approval with automatic welcome</td>
+</tr>
+<tr>
+<td>Milestones</td>
+<td>Reminder depends on someone's calendar</td>
+<td>Scheduled message per milestone, recurring or triggered at entry</td>
+</tr>
+<tr>
+<td>Repeated questions</td>
+<td>Tutor answers "where is the lesson link" again</td>
+<td>Commands such as <code>.aulas</code>, <code>.certificado</code>, <code>.menu</code></td>
+</tr>
+<tr>
+<td>Abuse</td>
+<td>Pirate course links and scams stay until someone sees them</td>
+<td>Automatic moderation removes the link and applies a strike</td>
+</tr>
+<tr>
+<td>Silence</td>
+<td>Noticed at the end of the access period</td>
+<td>Weekly list of members inactive for seven days</td>
+</tr>
+<tr>
+<td>Exit</td>
+<td>Removal without warning, or no removal at all</td>
+<td>Notice before removal, then timed removal</td>
+</tr>
+</tbody>
+</table>
+<h2>A configuration sketch</h2>
+<p>The YAML below is a planning artifact, not a 9bot export format. Use it to agree on the pipeline with the course team before anyone opens the panel.</p>
+<pre><code class="language-yaml">cohort: data-analysis-2027-01
+calendar: fixed            # or rolling: start a workflow on member entry
+entry:
+  approval: filtered
+  welcome: &quot;Start with module 1. Questions go to the group; use .menu for quick answers.&quot;
+milestones:
+  - id: m1
+    when: week_1
+    ask: &quot;short challenge, reply with your result&quot;
+    send_at: &quot;19:00&quot;
+  - id: mid
+    when: half_of_access_period
+    ask: &quot;poll: what is blocking you?&quot;
+  - id: final
+    when: last_2_weeks
+    ask: &quot;checklist of what is missing for the certificate (.certificado)&quot;
+  - id: done
+    when: course_end
+    ask: &quot;congratulations, next step: alumni community&quot;
+detector:
+  signal: inactive_7_days
+  cadence: weekly
+  cross_with: course_platform_progress
+follow_up:
+  owner: tutor            # manual, private contact
+access:
+  mode: time_based
+  notice_before_removal: true
+</code></pre>
+<h2>Failure modes worth testing</h2>
+<ol>
+<li>The welcome fires but points to a lesson link that changed. Commands are the cheaper place to keep links current.</li>
+<li>Milestones go out on the cohort calendar while rolling entrants are on a different week. Split fixed and rolling cohorts, or trigger per entry.</li>
+<li>The silence list grows and nobody owns it. Name the tutor per cohort in writing.</li>
+<li>Removal happens without notice. The student experiences it as being cut off, and the renewal window is lost.</li>
+<li>A pirate link survives for a day. Paying students see the course being given away in their own group.</li>
+</ol>
+<h2>Measuring it honestly</h2>
+<p>Combine course platform data with group data. Completion rate comes from the platform (finishers divided by enrolled). Active members, members inactive for seven days and exits before the end come from 9bot Reports. Replies to each milestone are counted in the cohort group and divided by its members. Then compare cohorts that ran the milestone plan with cohorts that did not. That comparison, not the 2024 survey, is what tells you whether your pipeline works.</p>
+<h2>Where this sits in the research series</h2>
+<p>This note belongs to the <a href="https://9-bot.github.io/whatsapp-group-security-research/">WhatsApp group security research notes</a>. The data protection paper in the same series observes that every member of a group sees everyone else's number, which is one more reason to end access on a schedule rather than leave finished cohorts open indefinitely. For pricing, the article lists the plan in US dollars as of 30 October 2026; check it there before quoting a number.</p>
+</body>
+</html>

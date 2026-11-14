@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A feed poller as a small state machine: modelling RSS delivery into WhatsApp groups</title>
+<link rel="canonical" href="https://9bot.com.br/en/how-to-set-up-rss-feed-whatsapp/">
+<link rel="icon" type="image/png" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<link rel="apple-touch-icon" sizes="400x400" href="https://9-bot.github.io/whatsapp-group-security-research/assets/author-9-400.png">
+<meta name="description" content="WhatsApp has no RSS reader. Anything that turns a publisher&#x27;s feed into messages inside a group is an external component with three jobs: fetch the feed on">
+<meta property="og:title" content="A feed poller as a small state machine: modelling RSS delivery into WhatsApp groups">
+<meta property="og:description" content="WhatsApp has no RSS reader. Anything that turns a publisher&#x27;s feed into messages inside a group is an external component with three jobs: fetch the feed on">
+<meta property="og:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-a-feed-poller-as-a-small-state-machine-modelling-rss-delivery-into-whatsapp-grou.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://9-bot.github.io/whatsapp-group-security-research/assets/share/og-a-feed-poller-as-a-small-state-machine-modelling-rss-delivery-into-whatsapp-grou.png">
+<style>body{max-width:760px;margin:2em auto;padding:0 1em;font-family:Georgia,serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}pre{white-space:pre-wrap}img{max-width:100%}</style>
+</head>
+<body>
+<h1>A feed poller as a small state machine: modelling RSS delivery into WhatsApp groups</h1>
+<p>WhatsApp has no RSS reader. Anything that turns a publisher's feed into messages inside a group is an external component with three jobs: fetch the feed on a clock, decide which entries are new, and post a title with its link. Described like that, the component is a tiny state machine, and most operational surprises come from states nobody wrote down.</p>
+<p>This note models that machine. The product walkthrough, with the exact dashboard labels, is in <a href="https://9bot.com.br/en/how-to-set-up-rss-feed-whatsapp/">9bot's tutorial on setting up an RSS feed for WhatsApp</a>. For context on the vendor: 9bot is a paid subscription (seven days to try it first) and an independent product, with no Meta or WhatsApp certification behind it.</p>
+<h2>Preconditions the machine cannot fix</h2>
+<p>Three inputs must exist before the first tick:</p>
+<ol>
+<li>A valid feed URL. WordPress exposes one at the root address plus <code>/feed/</code>, and every category publishes its own.</li>
+<li>A target group linked to the 9bot dashboard in which the bot holds admin rights. Without admin rights the post step has nowhere to land.</li>
+<li>A schedule. Polling with no send window is how a business news group receives a burst of links at 03:00.</li>
+</ol>
+<p>A feed that fails validation is a configuration error, not a runtime one. The dashboard surfaces it at setup through a Verify Feed button, which is the right place: reject bad input before the loop ever starts.</p>
+<h2>States and transitions</h2>
+<pre><code class="language-text"> [IDLE] --tick--&gt; [FETCH] --ok--&gt; [DIFF] --new items--&gt; [BATCH] --window open--&gt; [POST]
+    ^                |                |                     |                        |
+    |             error            nothing new          window closed               done
+    |                v                v                     v                        |
+    +----------- [IDLE] &lt;---------- [IDLE] &lt;--------- [HOLD until window] &lt;---------+
+</code></pre>
+<ul>
+<li><strong>FETCH</strong> runs on the configured interval in minutes.</li>
+<li><strong>DIFF</strong> keeps only entries not yet delivered.</li>
+<li><strong>BATCH</strong> truncates to the maximum items per post. This is the cap that keeps a news group from becoming a wall of links.</li>
+<li><strong>HOLD</strong> applies when the schedule says "not now": either the default 06:00 and 18:00 roundups, or custom times chosen per section.</li>
+</ul>
+<p>The interesting state is HOLD. In the fixed interval mode it barely exists, because every tick may post. In the default and custom time modes it is where most items wait, and readers see digests instead of a stream.</p>
+<h2>Three implementations of the same machine</h2>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Person copying links</th>
+<th>Zapier or Make flow</th>
+<th>9bot group bot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Who runs FETCH</td>
+<td>Whoever remembers to check the site</td>
+<td>An RSS trigger inside the flow</td>
+<td>The bot, on the set interval</td>
+</tr>
+<tr>
+<td>Where DIFF state lives</td>
+<td>In someone's head</td>
+<td>Inside the iPaaS scenario</td>
+<td>Inside the integration</td>
+</tr>
+<tr>
+<td>Billing unit</td>
+<td>Staff hours</td>
+<td>Per task (Zapier) or per credit (Make)</td>
+<td>Flat plan</td>
+</tr>
+<tr>
+<td>POST dependency</td>
+<td>The person's phone</td>
+<td>A third party WhatsApp connector or API</td>
+<td>Bot admin rights in the group</td>
+</tr>
+<tr>
+<td>Off hours behaviour</td>
+<td>Items are late or missed</td>
+<td>Depends on how the flow was built</td>
+<td>Governed by the schedule mode</td>
+</tr>
+</tbody>
+</table>
+<p>Two cost facts from the tutorial are worth keeping exact. Zapier counts each completed action as a task, and its Pro tier with 750 tasks is listed at US$19.99 per month when billed annually. Make consumes credits per module action, and unused credits expire at the end of the term. A feed that publishes often multiplies those units; a flat plan does not. 9bot itself is quoted in the article at US$35 per month for the first three months and US$70 afterwards.</p>
+<h2>The configuration as data</h2>
+<p>Treat the five fields the integration asks for as a versioned record. Writing them down per group makes reviews possible and keeps section editors honest about cadence.</p>
+<pre><code class="language-yaml"># rss-delivery/business-section.yaml
+group: &quot;Industry news / business section&quot;
+feed_url: &quot;https://example-trade-portal.com/category/business/feed/&quot;
+verify_on_save: true
+schedule:
+  mode: custom_times        # fixed_interval | default_times | custom_times
+  times: [&quot;07:30&quot;, &quot;17:45&quot;] # chosen by the section editor
+interval_minutes: 30        # how often FETCH runs
+max_items_per_post: 3       # BATCH cap
+group_settings:
+  admins_only_messages: true
+owner: &quot;section editor (named person)&quot;
+review: &quot;monthly, using active members and exits from Reports&quot;
+</code></pre>
+<p>The values above are an illustration, not a recommendation; the tutorial does not prescribe numbers for interval or cap.</p>
+<p><a href="https://9bot.com.br/en/how-to-set-up-rss-feed-whatsapp/"><img alt="9bot banner: automated posting" src="https://9bot.com.br/wp-content/uploads/2026/10/Your-marketing-team-shouldnt-be-posting-one-message-at-a-time-EN.gif" /></a></p>
+<h2>Routing: one feed per section</h2>
+<p>Because WordPress emits a feed per category, the clean design is one machine per section and one group per audience. A logistics trade publisher can keep a regulation group, a market group and a regional group, each fed only by its category. Mixing all categories into one group pushes every reader through items they never asked for, and the exits metric will show it.</p>
+<h2>Channels are a different system</h2>
+<p>Teams often ask whether the same machine can target a WhatsApp Channel. According to the tutorial, a channel cannot ingest a feed on its own, and Meta's API offers no way to publish into one (a point the article says was checked on 9 October 2026). The machine described here targets groups. Do not design a pipeline whose POST step depends on an endpoint that does not exist.</p>
+<h2>Governance hooks</h2>
+<ul>
+<li><strong>Least privilege on the conversation.</strong> Setting the group so that only admins send messages keeps news visible and removes a reply surface that attracts spam links. The scams paper in this research series (Schroll 2026, DOI 10.17605/OSF.IO/CYP2G) describes the link as the mechanism that moves victims out of the chat; fewer open senders means fewer such links.</li>
+<li><strong>The bot is a data processor.</strong> In the series' paper on personal data in business groups (DOI 10.17605/OSF.IO/ZG9U7), an automation layer counts as processing because it handles at least phone numbers and join or leave events; list it alongside your other processing activities.</li>
+<li><strong>Admin rights are privileged identities.</strong> The account takeover paper (DOI 10.17605/OSF.IO/HZUN5) notes that a hijacked admin inherits every group permission. Keep the list of human admins short; the bot needs its seat, people do not all need theirs.</li>
+</ul>
+<h2>Observability</h2>
+<p>The machine is only as good as the feedback loop. The tutorial points to Reports, specifically active members and exits, as the signal for tuning frequency and timing. A rise in exits after switching from default times to a short fixed interval is a direct answer about cadence.</p>
+<h2>FAQ</h2>
+<p><strong>Does the poller post full articles?</strong> The tutorial describes title and link per item, which keeps traffic flowing to the publisher's site.</p>
+<p><strong>Can one group receive several feeds?</strong> Nothing stops it, but the per-section design above usually reads better.</p>
+<p><strong>What happens to items published at night?</strong> In the default or custom time modes they wait for the next window.</p>
+<p>More notes from this series sit in the <a href="https://9-bot.github.io/whatsapp-group-security-research/">WhatsApp group security research index</a>.</p>
+</body>
+</html>
